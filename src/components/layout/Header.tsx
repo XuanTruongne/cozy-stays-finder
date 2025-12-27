@@ -1,11 +1,21 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Search } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, User, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut, loading } = useAuth();
 
   const navLinks = [
     { href: '/', label: 'Trang Chủ' },
@@ -52,12 +62,40 @@ const Header = () => {
                 <Search className="h-5 w-5" />
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link to="/auth">
-                <User className="h-4 w-4 mr-2" />
-                Đăng nhập
-              </Link>
-            </Button>
+            
+            {!loading && (
+              user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <User className="h-4 w-4 mr-2" />
+                      {user.email?.split('@')[0]}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      Hồ sơ của tôi
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/bookings')}>
+                      Lịch sử đặt phòng
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => signOut()}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button variant="outline" asChild>
+                  <Link to="/auth">
+                    <User className="h-4 w-4 mr-2" />
+                    Đăng nhập
+                  </Link>
+                </Button>
+              )
+            )}
+            
             <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90" asChild>
               <Link to="/search">
                 Đặt Phòng Ngay
@@ -98,12 +136,26 @@ const Header = () => {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 mt-4 px-4">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <User className="h-4 w-4 mr-2" />
-                    Đăng nhập
-                  </Link>
-                </Button>
+                {!loading && (
+                  user ? (
+                    <>
+                      <Button variant="outline" className="w-full" onClick={() => { navigate('/profile'); setIsMenuOpen(false); }}>
+                        Hồ sơ của tôi
+                      </Button>
+                      <Button variant="ghost" className="w-full" onClick={() => { signOut(); setIsMenuOpen(false); }}>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Đăng xuất
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                        <User className="h-4 w-4 mr-2" />
+                        Đăng nhập
+                      </Link>
+                    </Button>
+                  )
+                )}
                 <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" asChild>
                   <Link to="/search" onClick={() => setIsMenuOpen(false)}>
                     Đặt Phòng Ngay

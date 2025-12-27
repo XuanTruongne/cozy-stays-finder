@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom';
 import { Star, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Hotel } from '@/lib/mockData';
-import { formatPrice, ROOM_TYPES, WARDS } from '@/lib/constants';
+import type { Hotel } from '@/hooks/useHotels';
+import { formatPrice, WARDS } from '@/lib/constants';
 
 interface HotelCardProps {
   hotel: Hotel;
 }
 
 const HotelCard = ({ hotel }: HotelCardProps) => {
-  const typeLabel = ROOM_TYPES.find(t => t.value === hotel.type)?.label || hotel.type;
   const wardLabel = WARDS.find(w => w.value === hotel.ward)?.label || hotel.ward;
+  const firstImage = hotel.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800';
+  const amenities = hotel.amenities || [];
 
   return (
     <Link to={`/hotel/${hotel.id}`}>
@@ -19,22 +20,11 @@ const HotelCard = ({ hotel }: HotelCardProps) => {
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden">
           <img
-            src={hotel.images[0]}
+            src={firstImage}
             alt={hotel.name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          
-          {/* Badge */}
-          <Badge className="absolute top-3 left-3 bg-secondary text-secondary-foreground">
-            {typeLabel}
-          </Badge>
-          
-          {/* Price */}
-          <div className="absolute bottom-3 right-3 bg-card/95 backdrop-blur-sm rounded-lg px-3 py-1.5">
-            <span className="text-lg font-bold text-primary">{formatPrice(hotel.price)}</span>
-            <span className="text-sm text-muted-foreground">/đêm</span>
-          </div>
         </div>
 
         {/* Content */}
@@ -51,8 +41,8 @@ const HotelCard = ({ hotel }: HotelCardProps) => {
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-secondary text-secondary" />
-              <span className="font-medium text-foreground">{hotel.rating}</span>
-              <span className="text-sm text-muted-foreground">({hotel.reviewCount} đánh giá)</span>
+              <span className="font-medium text-foreground">{hotel.rating || 0}</span>
+              <span className="text-sm text-muted-foreground">({hotel.review_count || 0} đánh giá)</span>
             </div>
           </div>
 
@@ -61,18 +51,20 @@ const HotelCard = ({ hotel }: HotelCardProps) => {
           </p>
 
           {/* Amenities Preview */}
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {hotel.amenities.slice(0, 3).map((amenity, index) => (
-              <Badge key={index} variant="secondary" className="text-xs font-normal">
-                {amenity}
-              </Badge>
-            ))}
-            {hotel.amenities.length > 3 && (
-              <Badge variant="outline" className="text-xs font-normal">
-                +{hotel.amenities.length - 3}
-              </Badge>
-            )}
-          </div>
+          {amenities.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {amenities.slice(0, 3).map((amenity, index) => (
+                <Badge key={index} variant="secondary" className="text-xs font-normal">
+                  {amenity}
+                </Badge>
+              ))}
+              {amenities.length > 3 && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  +{amenities.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>

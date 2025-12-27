@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Star, Shield, Clock, Award } from 'lucide-react';
+import { ArrowRight, Star, Shield, Clock, Award, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import SearchForm from '@/components/search/SearchForm';
 import HotelCard from '@/components/hotels/HotelCard';
-import { getFeaturedHotels } from '@/lib/mockData';
+import { useFeaturedHotels } from '@/hooks/useHotels';
 import { ROOM_TYPES } from '@/lib/constants';
 
 const Index = () => {
-  const featuredHotels = getFeaturedHotels();
+  const { data: featuredHotels, isLoading } = useFeaturedHotels();
 
   return (
     <Layout>
@@ -111,9 +111,19 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredHotels.slice(0, 6).map((hotel) => (
-              <HotelCard key={hotel.id} hotel={hotel} />
-            ))}
+            {isLoading ? (
+              <div className="col-span-full flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-secondary" />
+              </div>
+            ) : featuredHotels && featuredHotels.length > 0 ? (
+              featuredHotels.slice(0, 6).map((hotel) => (
+                <HotelCard key={hotel.id} hotel={hotel} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12 text-muted-foreground">
+                Chưa có khách sạn nổi bật
+              </div>
+            )}
           </div>
           
           <div className="mt-8 text-center md:hidden">

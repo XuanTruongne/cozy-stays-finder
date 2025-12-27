@@ -5,9 +5,10 @@ import SearchForm from '@/components/search/SearchForm';
 import HotelCard from '@/components/hotels/HotelCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { mockHotels } from '@/lib/mockData';
+import { useHotels } from '@/hooks/useHotels';
+import { useRooms } from '@/hooks/useRooms';
 import { ROOM_TYPES, WARDS, formatPrice } from '@/lib/constants';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Loader2 } from 'lucide-react';
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -19,24 +20,43 @@ const Search = () => {
   const [priceRange, setPriceRange] = useState([0, 10000000]);
   const [sortBy, setSortBy] = useState('recommended');
 
+  const { data: hotels, isLoading: hotelsLoading } = useHotels();
+  const { data: rooms, isLoading: roomsLoading } = useRooms();
+
+  const isLoading = hotelsLoading || roomsLoading;
+
+  // Get minimum price for each hotel from rooms
+  const hotelMinPrices = useMemo(() => {
+    if (!rooms) return {};
+    const prices: Record<string, number> = {};
+    rooms.forEach(room => {
+      if (!prices[room.hotel_id] || room.price < prices[room.hotel_id]) {
+        prices[room.hotel_id] = room.price;
+      }
+    });
+    return prices;
+  }, [rooms]);
+
   const filteredHotels = useMemo(() => {
-    let results = mockHotels.filter(hotel => {
-      if (type && type !== 'all' && hotel.type !== type) return false;
+    if (!hotels) return [];
+    
+    let results = hotels.filter(hotel => {
       if (ward && ward !== 'all' && hotel.ward !== ward) return false;
-      if (hotel.price < priceRange[0] || hotel.price > priceRange[1]) return false;
+      const minPrice = hotelMinPrices[hotel.id] || 0;
+      if (minPrice < priceRange[0] || minPrice > priceRange[1]) return false;
       return true;
     });
 
     // Sort
     switch (sortBy) {
       case 'price-asc':
-        results.sort((a, b) => a.price - b.price);
+        results.sort((a, b) => (hotelMinPrices[a.id] || 0) - (hotelMinPrices[b.id] || 0));
         break;
       case 'price-desc':
-        results.sort((a, b) => b.price - a.price);
+        results.sort((a, b) => (hotelMinPrices[b.id] || 0) - (hotelMinPrices[a.id] || 0));
         break;
       case 'rating':
-        results.sort((a, b) => b.rating - a.rating);
+        results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
       case 'name':
         results.sort((a, b) => a.name.localeCompare(b.name));
@@ -46,7 +66,7 @@ const Search = () => {
     }
 
     return results;
-  }, [type, ward, priceRange, sortBy]);
+  }, [hotels, ward, priceRange, sortBy, hotelMinPrices]);
 
   return (
     <Layout>
@@ -69,22 +89,6 @@ const Search = () => {
                 <SlidersHorizontal className="w-5 h-5 text-secondary" />
                 Bộ lọc
               </h2>
-
-              {/* Room Type Filter */}
-              <div className="mb-6">
-                <label className="text-sm font-medium text-foreground mb-2 block">Loại phòng</label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tất cả" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
-                    {ROOM_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
               {/* Ward Filter */}
               <div className="mb-6">
@@ -147,7 +151,11 @@ const Search = () => {
               </p>
             </div>
 
-            {filteredHotels.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-secondary" />
+              </div>
+            ) : filteredHotels.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredHotels.map((hotel) => (
                   <HotelCard key={hotel.id} hotel={hotel} />
