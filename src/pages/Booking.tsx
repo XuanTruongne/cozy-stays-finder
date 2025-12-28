@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,47 +11,93 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getHotelById, getRoomsByHotelId, Room } from '@/lib/mockData';
+import { Textarea } from '@/components/ui/textarea';
+import { useHotel } from '@/hooks/useHotels';
+import { useRooms } from '@/hooks/useRooms';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { formatPrice, formatDate } from '@/lib/constants';
 import { format, differenceInDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Calendar as CalendarIcon, MapPin, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Check, Loader2, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100),
   guestEmail: z.string().email('Email không hợp lệ').max(255),
   guestPhone: z.string().min(10, 'Số điện thoại không hợp lệ').max(15),
-  roomCount: z.string(),
+  guests: z.string(),
   specialRequests: z.string().max(500).optional(),
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
 
+interface Room {
+  id: string;
+  name: string;
+  type: string;
+  price: number;
+  capacity: number;
+  description: string | null;
+  amenities: string[] | null;
+  images: string[] | null;
+}
+
 const Booking = () => {
   const { hotelId, roomId } = useParams<{ hotelId: string; roomId?: string }>();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   
-  const hotel = getHotelById(hotelId || '');
-  const rooms = getRoomsByHotelId(hotelId || '');
-  const initialRoom = roomId ? rooms.find(r => r.id === roomId) : rooms[0];
+  const { data: hotel, isLoading: hotelLoading } = useHotel(hotelId || '');
+  const { data: rooms, isLoading: roomsLoading } = useRooms(hotelId || '');
 
-  const [selectedRoom, setSelectedRoom] = useState<Room | undefined>(initialRoom);
+  const [selectedRoom, setSelectedRoom] = useState<Room | undefined>();
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState<{
+    hotelName: string;
+    roomName: string;
+    checkIn: Date;
+    checkOut: Date;
+    guests: number;
+    totalPrice: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (rooms && rooms.length > 0) {
+      const initialRoom = roomId ? rooms.find(r => r.id === roomId) : rooms[0];
+      setSelectedRoom(initialRoom);
+    }
+  }, [rooms, roomId]);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       guestName: '',
-      guestEmail: '',
+      guestEmail: user?.email || '',
       guestPhone: '',
-      roomCount: '1',
+      guests: '1',
       specialRequests: '',
     },
   });
+
+  useEffect(() => {
+    if (user?.email) {
+      form.setValue('guestEmail', user.email);
+    }
+  }, [user, form]);
+
+  if (hotelLoading || roomsLoading || authLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-secondary" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (!hotel) {
     return (
@@ -64,9 +110,32 @@ const Booking = () => {
     );
   }
 
+  // Require login to book
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16">
+          <Card className="max-w-md mx-auto text-center p-8">
+            <LogIn className="w-16 h-16 text-secondary mx-auto mb-6" />
+            <h1 className="text-2xl font-display font-bold mb-4">Đăng nhập để đặt phòng</h1>
+            <p className="text-muted-foreground mb-6">
+              Vui lòng đăng nhập hoặc tạo tài khoản để tiếp tục đặt phòng tại {hotel.name}
+            </p>
+            <Button 
+              onClick={() => navigate('/auth', { state: { from: `/booking/${hotelId}${roomId ? `/${roomId}` : ''}` } })}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+            >
+              Đăng nhập ngay
+            </Button>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
-  const roomCount = parseInt(form.watch('roomCount') || '1');
-  const totalPrice = selectedRoom ? selectedRoom.price * nights * roomCount : 0;
+  const guestsCount = parseInt(form.watch('guests') || '1');
+  const totalPrice = selectedRoom ? selectedRoom.price * nights : 0;
 
   const onSubmit = async (data: BookingFormData) => {
     if (!checkIn || !checkOut) {
@@ -77,18 +146,49 @@ const Booking = () => {
       toast.error('Vui lòng chọn phòng');
       return;
     }
+    if (nights <= 0) {
+      toast.error('Ngày trả phòng phải sau ngày nhận phòng');
+      return;
+    }
 
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    toast.success('Đặt phòng thành công!');
+
+    try {
+      const { error } = await supabase.from('bookings').insert({
+        user_id: user.id,
+        hotel_id: hotelId!,
+        room_id: selectedRoom.id,
+        check_in: format(checkIn, 'yyyy-MM-dd'),
+        check_out: format(checkOut, 'yyyy-MM-dd'),
+        guests: parseInt(data.guests),
+        guest_name: data.guestName,
+        guest_email: data.guestEmail,
+        guest_phone: data.guestPhone,
+        special_requests: data.specialRequests || null,
+        total_price: totalPrice,
+        status: 'pending',
+      });
+
+      if (error) throw error;
+
+      setBookingDetails({
+        hotelName: hotel.name,
+        roomName: selectedRoom.name,
+        checkIn,
+        checkOut,
+        guests: guestsCount,
+        totalPrice,
+      });
+      setIsSuccess(true);
+      toast.success('Đặt phòng thành công!');
+    } catch (error: any) {
+      toast.error(error.message || 'Có lỗi xảy ra khi đặt phòng');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  if (isSuccess) {
+  if (isSuccess && bookingDetails) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-16">
@@ -98,25 +198,25 @@ const Booking = () => {
             </div>
             <h1 className="text-2xl font-display font-bold mb-4">Đặt phòng thành công!</h1>
             <p className="text-muted-foreground mb-6">
-              Cảm ơn bạn đã đặt phòng tại {hotel.name}. Chúng tôi sẽ gửi email xác nhận đến bạn trong giây lát.
+              Cảm ơn bạn đã đặt phòng tại {bookingDetails.hotelName}. Chúng tôi sẽ gửi email xác nhận đến bạn trong giây lát.
             </p>
             <div className="bg-muted/50 rounded-lg p-6 mb-6 text-left">
               <h3 className="font-semibold mb-4">Thông tin đặt phòng:</h3>
               <div className="space-y-2 text-sm">
-                <p><span className="text-muted-foreground">Khách sạn:</span> {hotel.name}</p>
-                <p><span className="text-muted-foreground">Phòng:</span> {selectedRoom?.name}</p>
-                <p><span className="text-muted-foreground">Nhận phòng:</span> {checkIn && formatDate(checkIn)}</p>
-                <p><span className="text-muted-foreground">Trả phòng:</span> {checkOut && formatDate(checkOut)}</p>
-                <p><span className="text-muted-foreground">Số phòng:</span> {roomCount}</p>
+                <p><span className="text-muted-foreground">Khách sạn:</span> {bookingDetails.hotelName}</p>
+                <p><span className="text-muted-foreground">Phòng:</span> {bookingDetails.roomName}</p>
+                <p><span className="text-muted-foreground">Nhận phòng:</span> {formatDate(bookingDetails.checkIn)}</p>
+                <p><span className="text-muted-foreground">Trả phòng:</span> {formatDate(bookingDetails.checkOut)}</p>
+                <p><span className="text-muted-foreground">Số khách:</span> {bookingDetails.guests}</p>
                 <p className="text-lg font-semibold mt-4">
                   <span className="text-muted-foreground">Tổng tiền:</span>{' '}
-                  <span className="text-secondary">{formatPrice(totalPrice)}</span>
+                  <span className="text-secondary">{formatPrice(bookingDetails.totalPrice)}</span>
                 </p>
               </div>
             </div>
             <div className="flex gap-4 justify-center">
-              <Button variant="outline" onClick={() => navigate('/')}>
-                Về trang chủ
+              <Button variant="outline" onClick={() => navigate('/profile')}>
+                Xem đặt phòng của tôi
               </Button>
               <Button 
                 onClick={() => navigate('/search')}
@@ -147,25 +247,30 @@ const Booking = () => {
                     <CardTitle>Chọn phòng</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {rooms.map((room) => (
-                        <div
-                          key={room.id}
-                          onClick={() => setSelectedRoom(room)}
-                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                            selectedRoom?.id === room.id
-                              ? 'border-secondary bg-secondary/5'
-                              : 'border-border hover:border-secondary/50'
-                          }`}
-                        >
-                          <h4 className="font-semibold">{room.name}</h4>
-                          <p className="text-sm text-muted-foreground">{room.roomType}</p>
-                          <p className="text-lg font-bold text-secondary mt-2">
-                            {formatPrice(room.price)}<span className="text-sm font-normal text-muted-foreground">/đêm</span>
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                    {rooms && rooms.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {rooms.map((room) => (
+                          <div
+                            key={room.id}
+                            onClick={() => setSelectedRoom(room)}
+                            className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                              selectedRoom?.id === room.id
+                                ? 'border-secondary bg-secondary/5'
+                                : 'border-border hover:border-secondary/50'
+                            }`}
+                          >
+                            <h4 className="font-semibold">{room.name}</h4>
+                            <p className="text-sm text-muted-foreground">{room.type}</p>
+                            <p className="text-sm text-muted-foreground">Tối đa {room.capacity} khách</p>
+                            <p className="text-lg font-bold text-secondary mt-2">
+                              {formatPrice(room.price)}<span className="text-sm font-normal text-muted-foreground">/đêm</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Không có phòng khả dụng</p>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -269,24 +374,41 @@ const Booking = () => {
                     </div>
                     <FormField
                       control={form.control}
-                      name="roomCount"
+                      name="guests"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Số phòng</FormLabel>
+                          <FormLabel>Số khách</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Chọn số phòng" />
+                                <SelectValue placeholder="Chọn số khách" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {[1, 2, 3, 4, 5].map((num) => (
+                              {[1, 2, 3, 4, 5, 6].map((num) => (
                                 <SelectItem key={num} value={num.toString()}>
-                                  {num} phòng
+                                  {num} khách
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="specialRequests"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Yêu cầu đặc biệt (tùy chọn)</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Nhập yêu cầu đặc biệt của bạn..."
+                              className="resize-none"
+                              {...field} 
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -296,10 +418,17 @@ const Booking = () => {
 
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !selectedRoom}
                   className="w-full h-12 bg-secondary text-secondary-foreground hover:bg-secondary/90 text-lg"
                 >
-                  {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đặt phòng'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Xác nhận đặt phòng'
+                  )}
                 </Button>
               </form>
             </Form>
@@ -314,7 +443,7 @@ const Booking = () => {
               <CardContent className="space-y-4">
                 <div className="flex gap-4">
                   <img
-                    src={hotel.images[0]}
+                    src={hotel.images?.[0] || '/placeholder.svg'}
                     alt={hotel.name}
                     className="w-24 h-24 object-cover rounded-lg"
                   />
@@ -331,10 +460,11 @@ const Booking = () => {
                   <div className="border-t pt-4">
                     <p className="text-sm text-muted-foreground">Phòng đã chọn</p>
                     <p className="font-semibold">{selectedRoom.name}</p>
+                    <p className="text-sm text-muted-foreground">{formatPrice(selectedRoom.price)}/đêm</p>
                   </div>
                 )}
 
-                {checkIn && checkOut && (
+                {checkIn && checkOut && nights > 0 && (
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Nhận phòng</span>
@@ -349,8 +479,8 @@ const Booking = () => {
                       <span>{nights} đêm</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Số phòng</span>
-                      <span>{roomCount}</span>
+                      <span className="text-muted-foreground">Số khách</span>
+                      <span>{guestsCount}</span>
                     </div>
                   </div>
                 )}
