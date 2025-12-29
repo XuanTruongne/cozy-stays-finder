@@ -69,7 +69,7 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
                       <User className="h-4 w-4 mr-2" />
-                      {user.email?.split('@')[0]}
+                      {user.email?.split('@')[0] || user.phone}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -87,12 +87,19 @@ const Header = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button variant="outline" asChild>
-                  <Link to="/auth">
-                    <User className="h-4 w-4 mr-2" />
-                    Đăng nhập
-                  </Link>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" asChild>
+                    <Link to="/auth">
+                      Đăng nhập
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link to="/auth?tab=signup">
+                      <User className="h-4 w-4 mr-2" />
+                      Đăng ký
+                    </Link>
+                  </Button>
+                </div>
               )
             )}
             
@@ -148,12 +155,19 @@ const Header = () => {
                       </Button>
                     </>
                   ) : (
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                        <User className="h-4 w-4 mr-2" />
-                        Đăng nhập
-                      </Link>
-                    </Button>
+                    <>
+                      <Button variant="ghost" className="w-full" asChild>
+                        <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                          Đăng nhập
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="w-full" asChild>
+                        <Link to="/auth?tab=signup" onClick={() => setIsMenuOpen(false)}>
+                          <User className="h-4 w-4 mr-2" />
+                          Đăng ký
+                        </Link>
+                      </Button>
+                    </>
                   )
                 )}
                 <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90" asChild>

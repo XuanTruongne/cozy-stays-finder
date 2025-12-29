@@ -8,6 +8,9 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithOtp: (emailOrPhone: string, type: 'email' | 'phone') => Promise<{ error: Error | null }>;
+  verifyOtp: (emailOrPhone: string, token: string, type: 'email' | 'phone') => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -72,12 +75,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error: error as Error | null };
   };
 
+  const signInWithOtp = async (emailOrPhone: string, type: 'email' | 'phone') => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    if (type === 'email') {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: emailOrPhone,
+        options: {
+          emailRedirectTo: redirectUrl,
+        }
+      });
+      return { error: error as Error | null };
+    } else {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: emailOrPhone,
+      });
+      return { error: error as Error | null };
+    }
+  };
+
+  const verifyOtp = async (emailOrPhone: string, token: string, type: 'email' | 'phone') => {
+    if (type === 'email') {
+      const { error } = await supabase.auth.verifyOtp({
+        email: emailOrPhone,
+        token,
+        type: 'email',
+      });
+      return { error: error as Error | null };
+    } else {
+      const { error } = await supabase.auth.verifyOtp({
+        phone: emailOrPhone,
+        token,
+        type: 'sms',
+      });
+      return { error: error as Error | null };
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+      }
+    });
+    
+    return { error: error as Error | null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signUp, 
+      signIn, 
+      signInWithOtp, 
+      verifyOtp, 
+      signInWithGoogle, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );
