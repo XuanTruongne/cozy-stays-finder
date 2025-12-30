@@ -132,6 +132,7 @@ export type Database = {
           id: string
           images: string[] | null
           name: string
+          property_type: string
           rating: number | null
           review_count: number | null
           updated_at: string | null
@@ -146,6 +147,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           name: string
+          property_type?: string
           rating?: number | null
           review_count?: number | null
           updated_at?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           name?: string
+          property_type?: string
           rating?: number | null
           review_count?: number | null
           updated_at?: string | null
