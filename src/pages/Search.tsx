@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import SearchToolbar from '@/components/search/SearchToolbar';
@@ -21,6 +21,7 @@ const Search = () => {
   const [searchParams] = useSearchParams();
   const initialCheckIn = searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')!) : undefined;
   const initialCheckOut = searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')!) : undefined;
+  const initialType = searchParams.get('type') || '';
 
   // Toolbar state
   const [checkIn, setCheckIn] = useState<Date | undefined>(initialCheckIn);
@@ -28,10 +29,18 @@ const Search = () => {
   const [guests, setGuests] = useState<GuestCount>({ rooms: 1, adults: 2, children: 0 });
 
   // Filter state
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(initialType ? [initialType] : []);
   const [ward, setWard] = useState('');
   const [priceRange, setPriceRange] = useState([0, 10000000]);
   const [sortBy, setSortBy] = useState('recommended');
+
+  // Sync URL params with filter state
+  useEffect(() => {
+    const typeFromUrl = searchParams.get('type');
+    if (typeFromUrl && !selectedTypes.includes(typeFromUrl)) {
+      setSelectedTypes([typeFromUrl]);
+    }
+  }, [searchParams]);
 
   const { data: hotels, isLoading: hotelsLoading } = useHotels();
   const { data: rooms, isLoading: roomsLoading } = useRooms();
@@ -50,19 +59,6 @@ const Search = () => {
     return prices;
   }, [rooms]);
 
-  // Get hotel types based on room types
-  const hotelTypes = useMemo(() => {
-    if (!rooms) return {};
-    const types: Record<string, Set<string>> = {};
-    rooms.forEach(room => {
-      if (!types[room.hotel_id]) {
-        types[room.hotel_id] = new Set();
-      }
-      types[room.hotel_id].add(room.type);
-    });
-    return types;
-  }, [rooms]);
-
   const filteredHotels = useMemo(() => {
     if (!hotels) return [];
     
@@ -74,10 +70,9 @@ const Search = () => {
       const minPrice = hotelMinPrices[hotel.id] || 0;
       if (minPrice < priceRange[0] || minPrice > priceRange[1]) return false;
       
-      // Filter by room types
+      // Filter by property type (using hotels.property_type column)
       if (selectedTypes.length > 0) {
-        const hotelRoomTypes = hotelTypes[hotel.id];
-        if (!hotelRoomTypes || !selectedTypes.some(t => hotelRoomTypes.has(t))) {
+        if (!selectedTypes.includes(hotel.property_type)) {
           return false;
         }
       }
@@ -104,7 +99,7 @@ const Search = () => {
     }
 
     return results;
-  }, [hotels, ward, priceRange, sortBy, hotelMinPrices, selectedTypes, hotelTypes]);
+  }, [hotels, ward, priceRange, sortBy, hotelMinPrices, selectedTypes]);
 
   const toggleType = (type: string) => {
     setSelectedTypes(prev => 
