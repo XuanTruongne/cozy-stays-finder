@@ -1,22 +1,35 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import SearchForm from '@/components/search/SearchForm';
-import HotelCard from '@/components/hotels/HotelCard';
+import SearchToolbar from '@/components/search/SearchToolbar';
+import HotelListCard from '@/components/hotels/HotelListCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useHotels } from '@/hooks/useHotels';
 import { useRooms } from '@/hooks/useRooms';
 import { ROOM_TYPES, WARDS, formatPrice } from '@/lib/constants';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 
+interface GuestCount {
+  rooms: number;
+  adults: number;
+  children: number;
+}
+
 const Search = () => {
   const [searchParams] = useSearchParams();
-  const initialType = searchParams.get('type') || '';
-  const initialWard = searchParams.get('ward') || '';
+  const initialCheckIn = searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')!) : undefined;
+  const initialCheckOut = searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')!) : undefined;
 
-  const [type, setType] = useState(initialType);
-  const [ward, setWard] = useState(initialWard);
+  // Toolbar state
+  const [checkIn, setCheckIn] = useState<Date | undefined>(initialCheckIn);
+  const [checkOut, setCheckOut] = useState<Date | undefined>(initialCheckOut);
+  const [guests, setGuests] = useState<GuestCount>({ rooms: 1, adults: 2, children: 0 });
+
+  // Filter state
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [ward, setWard] = useState('');
   const [priceRange, setPriceRange] = useState([0, 10000000]);
   const [sortBy, setSortBy] = useState('recommended');
 
@@ -37,13 +50,38 @@ const Search = () => {
     return prices;
   }, [rooms]);
 
+  // Get hotel types based on room types
+  const hotelTypes = useMemo(() => {
+    if (!rooms) return {};
+    const types: Record<string, Set<string>> = {};
+    rooms.forEach(room => {
+      if (!types[room.hotel_id]) {
+        types[room.hotel_id] = new Set();
+      }
+      types[room.hotel_id].add(room.type);
+    });
+    return types;
+  }, [rooms]);
+
   const filteredHotels = useMemo(() => {
     if (!hotels) return [];
     
     let results = hotels.filter(hotel => {
+      // Filter by ward
       if (ward && ward !== 'all' && hotel.ward !== ward) return false;
+      
+      // Filter by price range
       const minPrice = hotelMinPrices[hotel.id] || 0;
       if (minPrice < priceRange[0] || minPrice > priceRange[1]) return false;
+      
+      // Filter by room types
+      if (selectedTypes.length > 0) {
+        const hotelRoomTypes = hotelTypes[hotel.id];
+        if (!hotelRoomTypes || !selectedTypes.some(t => hotelRoomTypes.has(t))) {
+          return false;
+        }
+      }
+      
       return true;
     });
 
@@ -66,44 +104,67 @@ const Search = () => {
     }
 
     return results;
-  }, [hotels, ward, priceRange, sortBy, hotelMinPrices]);
+  }, [hotels, ward, priceRange, sortBy, hotelMinPrices, selectedTypes, hotelTypes]);
+
+  const toggleType = (type: string) => {
+    setSelectedTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
 
   return (
     <Layout>
-      {/* Search Header */}
-      <section className="bg-primary py-8">
+      {/* Search Header with Toolbar */}
+      <section className="bg-primary py-6">
         <div className="container mx-auto px-4">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-primary-foreground mb-6">
+          <h1 className="text-2xl md:text-3xl font-display font-bold text-primary-foreground mb-4">
             Tìm kiếm chỗ ở
           </h1>
-          <SearchForm variant="compact" initialType={initialType} initialWard={initialWard} />
+          <SearchToolbar
+            checkIn={checkIn}
+            checkOut={checkOut}
+            guests={guests}
+            onCheckInChange={setCheckIn}
+            onCheckOutChange={setCheckOut}
+            onGuestsChange={setGuests}
+          />
         </div>
       </section>
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
-          <aside className="w-full lg:w-72 shrink-0">
-            <div className="bg-card rounded-lg shadow-custom p-6 sticky top-24">
-              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+          {/* Sidebar Filters - Left */}
+          <aside className="w-full lg:w-72 shrink-0 order-2 lg:order-1">
+            <div className="bg-card rounded-xl border border-border shadow-sm p-5 sticky top-24">
+              <h2 className="font-semibold text-lg mb-5 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-secondary" />
                 Bộ lọc
               </h2>
 
-              {/* Ward Filter */}
+              {/* Type Filter */}
               <div className="mb-6">
-                <label className="text-sm font-medium text-foreground mb-2 block">Phường</label>
-                <Select value={ward} onValueChange={setWard}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tất cả" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
-                    {WARDS.map((w) => (
-                      <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium text-foreground mb-3 block">
+                  Loại hình
+                </label>
+                <div className="space-y-2">
+                  {ROOM_TYPES.map((type) => (
+                    <div key={type.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={type.value}
+                        checked={selectedTypes.includes(type.value)}
+                        onCheckedChange={() => toggleType(type.value)}
+                      />
+                      <label
+                        htmlFor={type.value}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {type.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Price Range Filter */}
@@ -122,6 +183,22 @@ const Search = () => {
                   <span>{formatPrice(priceRange[0])}</span>
                   <span>{formatPrice(priceRange[1])}</span>
                 </div>
+              </div>
+
+              {/* Ward Filter */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-foreground mb-2 block">Phường</label>
+                <Select value={ward} onValueChange={setWard}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tất cả" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    {WARDS.map((w) => (
+                      <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Sort */}
@@ -143,8 +220,8 @@ const Search = () => {
             </div>
           </aside>
 
-          {/* Results */}
-          <main className="flex-1">
+          {/* Results - Right */}
+          <main className="flex-1 order-1 lg:order-2">
             <div className="flex justify-between items-center mb-6">
               <p className="text-muted-foreground">
                 Tìm thấy <span className="font-semibold text-foreground">{filteredHotels.length}</span> kết quả
@@ -156,13 +233,17 @@ const Search = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-secondary" />
               </div>
             ) : filteredHotels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="space-y-4">
                 {filteredHotels.map((hotel) => (
-                  <HotelCard key={hotel.id} hotel={hotel} />
+                  <HotelListCard 
+                    key={hotel.id} 
+                    hotel={hotel} 
+                    minPrice={hotelMinPrices[hotel.id]}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-muted/30 rounded-lg">
+              <div className="text-center py-16 bg-muted/30 rounded-xl border border-border">
                 <p className="text-muted-foreground text-lg">Không tìm thấy kết quả phù hợp</p>
                 <p className="text-sm text-muted-foreground mt-2">Hãy thử thay đổi bộ lọc</p>
               </div>
