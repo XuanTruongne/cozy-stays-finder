@@ -1,33 +1,34 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { useHotel } from '@/hooks/useHotels';
 import { useRooms } from '@/hooks/useRooms';
 import { WARDS, formatPrice } from '@/lib/constants';
-import { 
-  MapPin, Star, Users, ChevronLeft, ChevronRight, 
-  Wifi, Car, Coffee, Waves, Utensils, Dumbbell,
-  Check, Loader2
-} from 'lucide-react';
+import { MapPin, Star, Loader2, Building2 } from 'lucide-react';
 
-const amenityIcons: Record<string, React.ReactNode> = {
-  'WiFi miễn phí': <Wifi className="w-4 h-4" />,
-  'WiFi tốc độ cao': <Wifi className="w-4 h-4" />,
-  'Bãi đậu xe': <Car className="w-4 h-4" />,
-  'Bữa sáng': <Coffee className="w-4 h-4" />,
-  'Hồ bơi': <Waves className="w-4 h-4" />,
-  'Bể bơi': <Waves className="w-4 h-4" />,
-  'Nhà hàng': <Utensils className="w-4 h-4" />,
-  'Phòng gym': <Dumbbell className="w-4 h-4" />,
+// Hotel Details Components
+import HotelImageGallery from '@/components/hotel-details/HotelImageGallery';
+import HotelHighlights from '@/components/hotel-details/HotelHighlights';
+import HotelAmenities from '@/components/hotel-details/HotelAmenities';
+import HotelRooms from '@/components/hotel-details/HotelRooms';
+import HotelReviews from '@/components/hotel-details/HotelReviews';
+import HotelPolicies from '@/components/hotel-details/HotelPolicies';
+import HotelMap from '@/components/hotel-details/HotelMap';
+import NearbyHotels from '@/components/hotel-details/NearbyHotels';
+
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  villa: 'Villa',
+  homestay: 'Homestay',
+  hotel: 'Khách sạn',
+  apartment: 'Căn hộ',
+  guesthouse: 'Nhà nghỉ',
 };
 
 const HotelDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [currentImage, setCurrentImage] = useState(0);
 
   const { data: hotel, isLoading: hotelLoading } = useHotel(id || '');
   const { data: rooms, isLoading: roomsLoading } = useRooms(id);
@@ -59,177 +60,96 @@ const HotelDetails = () => {
   const images = hotel.images || [];
   const amenities = hotel.amenities || [];
   const minPrice = rooms && rooms.length > 0 ? Math.min(...rooms.map(r => r.price)) : 0;
-
-  const nextImage = () => {
-    if (images.length > 0) {
-      setCurrentImage((prev) => (prev + 1) % images.length);
-    }
-  };
-
-  const prevImage = () => {
-    if (images.length > 0) {
-      setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
-    }
-  };
+  const propertyTypeLabel = PROPERTY_TYPE_LABELS[hotel.property_type] || hotel.property_type;
 
   return (
     <Layout>
-      {/* Image Gallery */}
-      <section className="relative h-[50vh] md:h-[60vh] bg-muted">
-        {images.length > 0 ? (
-          <img
-            src={images[currentImage]}
-            alt={hotel.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            <p className="text-muted-foreground">Không có hình ảnh</p>
+      <div className="container mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <Badge className="bg-secondary/10 text-secondary hover:bg-secondary/20">
+              <Building2 className="w-3 h-3 mr-1" />
+              {propertyTypeLabel}
+            </Badge>
+            {hotel.featured && (
+              <Badge variant="secondary">Nổi bật</Badge>
+            )}
           </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        
-        {images.length > 1 && (
-          <>
-            <button
-              onClick={prevImage}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button
-              onClick={nextImage}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </>
-        )}
-
-        {/* Thumbnail Navigation */}
-        {images.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentImage(index)}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentImage ? 'bg-white' : 'bg-white/50'
-                }`}
-              />
-            ))}
+          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
+            {hotel.name}
+          </h1>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <MapPin className="w-4 h-4" />
+              {hotel.address}, {wardLabel}
+            </span>
+            <span className="flex items-center gap-1 bg-secondary/10 px-2 py-1 rounded">
+              <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+              <span className="font-bold">{hotel.rating || 0}</span>
+              <span className="text-muted-foreground">({hotel.review_count || 0} đánh giá)</span>
+            </span>
           </div>
-        )}
-      </section>
+        </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+        {/* Image Gallery */}
+        <HotelImageGallery images={images} hotelName={hotel.name} />
+
+        <div className="flex flex-col lg:flex-row gap-6 mt-6">
           {/* Main Content */}
-          <main className="flex-1">
-            {/* Hotel Info */}
-            <div className="mb-8">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-2">
-                    {hotel.name}
-                  </h1>
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {hotel.address}, {wardLabel}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 bg-secondary/10 px-3 py-2 rounded-lg">
-                  <Star className="w-5 h-5 fill-secondary text-secondary" />
-                  <span className="font-bold text-lg">{hotel.rating || 0}</span>
-                  <span className="text-sm text-muted-foreground">({hotel.review_count || 0})</span>
-                </div>
-              </div>
+          <main className="flex-1 space-y-6">
+            {/* Highlights */}
+            <HotelHighlights
+              rating={hotel.rating}
+              reviewCount={hotel.review_count}
+              propertyType={hotel.property_type}
+              ward={wardLabel}
+            />
 
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                {hotel.description}
-              </p>
+            {/* Amenities */}
+            <HotelAmenities amenities={amenities} />
 
-              {/* Amenities */}
-              {amenities.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                  {amenities.map((amenity) => (
-                    <Badge key={amenity} variant="outline" className="flex items-center gap-1.5 py-1.5 px-3">
-                      {amenityIcons[amenity] || <Check className="w-4 h-4" />}
-                      {amenity}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Description */}
+            {hotel.description && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-3">Mô tả</h3>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {hotel.description}
+                </p>
+              </Card>
+            )}
 
             {/* Rooms */}
-            <section>
-              <h2 className="text-2xl font-display font-bold mb-6">Các phòng còn trống</h2>
-              <div className="space-y-4">
-                {rooms && rooms.length > 0 ? (
-                  rooms.map((room) => (
-                    <Card key={room.id} className="overflow-hidden">
-                      <div className="flex flex-col md:flex-row">
-                        <div className="w-full md:w-64 h-48 md:h-auto shrink-0">
-                          {room.images && room.images.length > 0 ? (
-                            <img
-                              src={room.images[0]}
-                              alt={room.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-muted">
-                              <p className="text-muted-foreground text-sm">Không có hình</p>
-                            </div>
-                          )}
-                        </div>
-                        <CardContent className="flex-1 p-6">
-                          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                            <div>
-                              <h3 className="text-xl font-semibold mb-1">{room.name}</h3>
-                              <p className="text-sm text-muted-foreground mb-3">{room.type}</p>
-                              <p className="text-sm text-muted-foreground mb-4">{room.description}</p>
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                <Badge variant="outline" className="flex items-center gap-1">
-                                  <Users className="w-3 h-3" />
-                                  {room.capacity} người
-                                </Badge>
-                                {room.amenities?.slice(0, 3).map((amenity) => (
-                                  <Badge key={amenity} variant="outline">{amenity}</Badge>
-                                ))}
-                              </div>
-                              {room.available && (
-                                <p className="text-sm text-green-600">Còn phòng</p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-secondary">{formatPrice(room.price)}</p>
-                              <p className="text-sm text-muted-foreground mb-4">/đêm</p>
-                              <Button 
-                                onClick={() => navigate(`/booking/${hotel.id}/${room.id}`)}
-                                className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                              >
-                                Đặt phòng
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </div>
-                    </Card>
-                  ))
-                ) : (
-                  <Card className="p-8 text-center">
-                    <p className="text-muted-foreground">Hiện tại không có phòng nào</p>
-                  </Card>
-                )}
-              </div>
-            </section>
+            <HotelRooms rooms={rooms || []} hotelId={hotel.id} />
+
+            {/* Map */}
+            <HotelMap address={hotel.address} ward={wardLabel} />
+
+            {/* Reviews */}
+            <HotelReviews
+              hotelId={hotel.id}
+              rating={hotel.rating}
+              reviewCount={hotel.review_count}
+            />
+
+            {/* Policies */}
+            <HotelPolicies />
+
+            {/* Nearby Hotels */}
+            <NearbyHotels
+              currentHotelId={hotel.id}
+              ward={hotel.ward}
+              propertyType={hotel.property_type}
+            />
           </main>
 
           {/* Sidebar - Quick Booking */}
           <aside className="w-full lg:w-80 shrink-0">
             <Card className="sticky top-24 p-6">
               <div className="text-center mb-4">
+                <Badge className="mb-2 bg-secondary/10 text-secondary">
+                  {propertyTypeLabel}
+                </Badge>
                 <p className="text-sm text-muted-foreground">Giá từ</p>
                 <p className="text-3xl font-bold text-secondary">
                   {minPrice > 0 ? formatPrice(minPrice) : 'Liên hệ'}
@@ -238,12 +158,22 @@ const HotelDetails = () => {
               </div>
               <Button 
                 onClick={() => navigate(`/booking/${hotel.id}`)}
-                className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 h-12"
+                className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 h-12 mb-3"
               >
                 Đặt ngay
               </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  const roomsSection = document.querySelector('[data-rooms-section]');
+                  roomsSection?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full"
+              >
+                Xem các phòng
+              </Button>
               <p className="text-xs text-center text-muted-foreground mt-4">
-                Đặt phòng nhanh, không cần đăng nhập
+                Đặt phòng nhanh chóng & an toàn
               </p>
             </Card>
           </aside>
