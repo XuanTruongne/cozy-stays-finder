@@ -75,7 +75,7 @@ const RoomDetailModal = ({ room, hotelId, isOpen, onClose }: RoomDetailModalProp
   if (!room) return null;
 
   const images = room.images && room.images.length > 0 ? room.images : [];
-  const displayImages = images.slice(0, 6);
+  const displayImages = images.slice(0, 5);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % displayImages.length);
@@ -160,7 +160,7 @@ const RoomDetailModal = ({ room, hotelId, isOpen, onClose }: RoomDetailModalProp
 
                 {/* Thumbnail Grid */}
                 {displayImages.length > 1 && (
-                  <div className="grid grid-cols-6 gap-2 mt-2">
+                  <div className="grid grid-cols-5 gap-2 mt-2">
                     {displayImages.map((img, i) => (
                       <button
                         key={i}
