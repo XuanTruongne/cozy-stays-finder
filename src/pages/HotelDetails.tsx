@@ -14,6 +14,7 @@ import HotelHighlights from '@/components/hotel-details/HotelHighlights';
 import HotelAmenities from '@/components/hotel-details/HotelAmenities';
 import HotelRooms from '@/components/hotel-details/HotelRooms';
 import HotelReviews from '@/components/hotel-details/HotelReviews';
+import ReviewForm from '@/components/hotel-details/ReviewForm';
 import HotelPolicies from '@/components/hotel-details/HotelPolicies';
 import HotelMap from '@/components/hotel-details/HotelMap';
 import NearbyHotels from '@/components/hotel-details/NearbyHotels';
@@ -131,6 +132,9 @@ const HotelDetails = () => {
               rating={hotel.rating}
               reviewCount={hotel.review_count}
             />
+
+            {/* Write Review */}
+            <ReviewForm hotelId={hotel.id} />
 
             {/* Policies */}
             <HotelPolicies />
