@@ -49,6 +49,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
+import BookingSteps from '@/components/booking/BookingSteps';
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100),
@@ -278,6 +279,7 @@ const Booking = () => {
   if (isSuccess && bookingDetails) {
     return (
       <Layout>
+        <BookingSteps currentStep={3} />
         <div className="container mx-auto px-4 py-16">
           <Card className="max-w-2xl mx-auto text-center p-8">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -320,6 +322,7 @@ const Booking = () => {
 
   return (
     <Layout>
+      <BookingSteps currentStep={2} />
       <div className="bg-muted/30 min-h-screen">
         {/* Header with user greeting */}
         <div className="bg-card border-b">
