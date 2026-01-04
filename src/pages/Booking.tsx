@@ -7,8 +7,6 @@ import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +23,6 @@ import { formatPrice, formatDate } from '@/lib/constants';
 import { format, differenceInDays, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { 
-  Calendar as CalendarIcon, 
   MapPin, 
   Check, 
   Loader2, 
@@ -43,13 +40,16 @@ import {
   Maximize,
   Shield,
   Wifi,
-  Car,
-  Coffee,
-  Wind,
-  Pencil
+  Pencil,
+  Clock,
+  Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import BookingSteps from '@/components/booking/BookingSteps';
+import PaymentDebitCard from '@/components/booking/PaymentDebitCard';
+import PaymentMomo from '@/components/booking/PaymentMomo';
+import PaymentBankApp from '@/components/booking/PaymentBankApp';
+import BookingInvoice from '@/components/booking/BookingInvoice';
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100),
@@ -57,7 +57,7 @@ const bookingSchema = z.object({
   guestPhone: z.string().min(10, 'Số điện thoại không hợp lệ').max(15),
   guests: z.string(),
   specialRequests: z.string().max(500).optional(),
-  paymentMethod: z.enum(['debit_card', 'bank_app', 'momo']),
+  paymentMethod: z.enum(['pay_later', 'debit_card', 'bank_app', 'momo']),
   smokingPreference: z.enum(['non_smoking', 'smoking']),
   bedPreference: z.enum(['large_bed', 'twin_beds']).optional(),
   arrivalTime: z.string().optional(),
@@ -76,6 +76,8 @@ interface Room {
   amenities: string[] | null;
   images: string[] | null;
 }
+
+type PaymentStep = 'form' | 'debit_card' | 'momo' | 'bank_app' | 'invoice';
 
 const specialRequestOptions = [
   { id: 'high_floor', label: 'Tôi muốn lấy phòng tầng cao' },
@@ -114,18 +116,25 @@ const Booking = () => {
   const [checkIn, setCheckIn] = useState<Date>(addDays(new Date(), 1));
   const [checkOut, setCheckOut] = useState<Date>(addDays(new Date(), 2));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<PaymentStep>('form');
   const [showMoreRequests, setShowMoreRequests] = useState(false);
   const [selectedExtraRequests, setSelectedExtraRequests] = useState<string[]>([]);
   const [isEditingGuest, setIsEditingGuest] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<{
     hotelName: string;
+    hotelAddress?: string;
     roomName: string;
     checkIn: Date;
     checkOut: Date;
     guests: number;
     totalPrice: number;
+    guestName: string;
+    guestEmail: string;
+    guestPhone: string;
+    paymentMethod: string;
+    bookingCode?: string;
   } | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<BookingFormData | null>(null);
 
   useEffect(() => {
     if (rooms && rooms.length > 0) {
@@ -142,7 +151,7 @@ const Booking = () => {
       guestPhone: '',
       guests: '1',
       specialRequests: '',
-      paymentMethod: 'bank_app',
+      paymentMethod: 'pay_later',
       smokingPreference: 'non_smoking',
       bedPreference: 'large_bed',
       arrivalTime: 'Tôi chưa biết',
@@ -212,6 +221,57 @@ const Booking = () => {
     );
   };
 
+  const saveBookingToDatabase = async (data: BookingFormData, status: 'pending' | 'confirmed' = 'pending') => {
+    // Build special requests string
+    const extraRequestsLabels = selectedExtraRequests.map(id => 
+      specialRequestOptions.find(opt => opt.id === id)?.label
+    ).filter(Boolean);
+    
+    const allSpecialRequests = [
+      data.smokingPreference === 'non_smoking' ? 'Phòng không hút thuốc' : 'Phòng hút thuốc',
+      data.bedPreference === 'large_bed' ? 'Giường lớn' : 'Phòng 2 giường',
+      data.arrivalTime ? `Giờ đến dự kiến: ${data.arrivalTime}` : '',
+      ...extraRequestsLabels,
+      data.specialRequests || '',
+    ].filter(Boolean).join('; ');
+
+    const { error } = await supabase.from('bookings').insert({
+      user_id: user.id,
+      hotel_id: hotelId!,
+      room_id: selectedRoom!.id,
+      check_in: format(checkIn, 'yyyy-MM-dd'),
+      check_out: format(checkOut, 'yyyy-MM-dd'),
+      guests: parseInt(data.guests),
+      guest_name: data.guestName,
+      guest_email: data.guestEmail,
+      guest_phone: data.guestPhone,
+      special_requests: allSpecialRequests || null,
+      total_price: totalPrice,
+      status: status,
+    });
+
+    if (error) throw error;
+
+    const bookingCode = `BK${Date.now().toString().slice(-8)}`;
+    
+    setBookingDetails({
+      hotelName: hotel.name,
+      hotelAddress: hotel.address,
+      roomName: selectedRoom!.name,
+      checkIn,
+      checkOut,
+      guests: guestsCount,
+      totalPrice,
+      guestName: data.guestName,
+      guestEmail: data.guestEmail,
+      guestPhone: data.guestPhone,
+      paymentMethod: data.paymentMethod,
+      bookingCode,
+    });
+
+    return bookingCode;
+  };
+
   const onSubmit = async (data: BookingFormData) => {
     if (!checkIn || !checkOut) {
       toast.error('Vui lòng chọn ngày nhận và trả phòng');
@@ -226,49 +286,38 @@ const Booking = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    setPendingFormData(data);
 
-    // Build special requests string
-    const extraRequestsLabels = selectedExtraRequests.map(id => 
-      specialRequestOptions.find(opt => opt.id === id)?.label
-    ).filter(Boolean);
+    // Navigate to appropriate payment step based on selected method
+    if (data.paymentMethod === 'pay_later') {
+      // Pay later goes directly to invoice
+      setIsSubmitting(true);
+      try {
+        await saveBookingToDatabase(data, 'pending');
+        setPaymentStep('invoice');
+        toast.success('Đặt phòng thành công!');
+      } catch (error: any) {
+        toast.error(error.message || 'Có lỗi xảy ra khi đặt phòng');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else if (data.paymentMethod === 'debit_card') {
+      setPaymentStep('debit_card');
+    } else if (data.paymentMethod === 'momo') {
+      setPaymentStep('momo');
+    } else if (data.paymentMethod === 'bank_app') {
+      setPaymentStep('bank_app');
+    }
+  };
+
+  const handlePaymentComplete = async () => {
+    if (!pendingFormData) return;
     
-    const allSpecialRequests = [
-      data.smokingPreference === 'non_smoking' ? 'Phòng không hút thuốc' : 'Phòng hút thuốc',
-      data.bedPreference === 'large_bed' ? 'Giường lớn' : 'Phòng 2 giường',
-      data.arrivalTime ? `Giờ đến dự kiến: ${data.arrivalTime}` : '',
-      ...extraRequestsLabels,
-      data.specialRequests || '',
-    ].filter(Boolean).join('; ');
-
+    setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('bookings').insert({
-        user_id: user.id,
-        hotel_id: hotelId!,
-        room_id: selectedRoom.id,
-        check_in: format(checkIn, 'yyyy-MM-dd'),
-        check_out: format(checkOut, 'yyyy-MM-dd'),
-        guests: parseInt(data.guests),
-        guest_name: data.guestName,
-        guest_email: data.guestEmail,
-        guest_phone: data.guestPhone,
-        special_requests: allSpecialRequests || null,
-        total_price: totalPrice,
-        status: 'pending',
-      });
-
-      if (error) throw error;
-
-      setBookingDetails({
-        hotelName: hotel.name,
-        roomName: selectedRoom.name,
-        checkIn,
-        checkOut,
-        guests: guestsCount,
-        totalPrice,
-      });
-      setIsSuccess(true);
-      toast.success('Đặt phòng thành công!');
+      await saveBookingToDatabase(pendingFormData, 'confirmed');
+      setPaymentStep('invoice');
+      toast.success('Thanh toán thành công!');
     } catch (error: any) {
       toast.error(error.message || 'Có lỗi xảy ra khi đặt phòng');
     } finally {
@@ -276,45 +325,54 @@ const Booking = () => {
     }
   };
 
-  if (isSuccess && bookingDetails) {
+  const handleBackToForm = () => {
+    setPaymentStep('form');
+  };
+
+  // Show Invoice
+  if (paymentStep === 'invoice' && bookingDetails) {
     return (
       <Layout>
         <BookingSteps currentStep={3} />
-        <div className="container mx-auto px-4 py-16">
-          <Card className="max-w-2xl mx-auto text-center p-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-8 h-8 text-green-600" />
-            </div>
-            <h1 className="text-2xl font-display font-bold mb-4">Đặt phòng thành công!</h1>
-            <p className="text-muted-foreground mb-6">
-              Cảm ơn bạn đã đặt phòng tại {bookingDetails.hotelName}. Chúng tôi sẽ gửi email xác nhận đến bạn trong giây lát.
-            </p>
-            <div className="bg-muted/50 rounded-lg p-6 mb-6 text-left">
-              <h3 className="font-semibold mb-4">Thông tin đặt phòng:</h3>
-              <div className="space-y-2 text-sm">
-                <p><span className="text-muted-foreground">Khách sạn:</span> {bookingDetails.hotelName}</p>
-                <p><span className="text-muted-foreground">Phòng:</span> {bookingDetails.roomName}</p>
-                <p><span className="text-muted-foreground">Nhận phòng:</span> {formatDate(bookingDetails.checkIn)}</p>
-                <p><span className="text-muted-foreground">Trả phòng:</span> {formatDate(bookingDetails.checkOut)}</p>
-                <p><span className="text-muted-foreground">Số khách:</span> {bookingDetails.guests}</p>
-                <p className="text-lg font-semibold mt-4">
-                  <span className="text-muted-foreground">Tổng tiền:</span>{' '}
-                  <span className="text-secondary">{formatPrice(bookingDetails.totalPrice)}</span>
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4 justify-center">
-              <Button variant="outline" onClick={() => navigate('/profile')}>
-                Xem đặt phòng của tôi
-              </Button>
-              <Button 
-                onClick={() => navigate('/search')}
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-              >
-                Tìm thêm phòng
-              </Button>
-            </div>
-          </Card>
+        <div className="container mx-auto px-4 py-8">
+          <BookingInvoice bookingDetails={bookingDetails} />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show Payment Forms
+  if (paymentStep !== 'form') {
+    return (
+      <Layout>
+        <BookingSteps currentStep={2} />
+        <div className="container mx-auto px-4 py-8">
+          {paymentStep === 'debit_card' && (
+            <PaymentDebitCard 
+              totalPrice={totalPrice}
+              onComplete={handlePaymentComplete}
+              onBack={handleBackToForm}
+            />
+          )}
+          {paymentStep === 'momo' && (
+            <PaymentMomo 
+              totalPrice={totalPrice}
+              onComplete={handlePaymentComplete}
+              onBack={handleBackToForm}
+              recipientName="NGUYEN VAN A"
+              recipientPhone="0901234567"
+            />
+          )}
+          {paymentStep === 'bank_app' && (
+            <PaymentBankApp 
+              totalPrice={totalPrice}
+              onComplete={handlePaymentComplete}
+              onBack={handleBackToForm}
+              bankName="Vietcombank"
+              accountNumber="1234567890123"
+              accountName="NGUYEN VAN A"
+            />
+          )}
         </div>
       </Layout>
     );
@@ -364,11 +422,11 @@ const Booking = () => {
                                 className="space-y-4"
                               >
                                 {/* Pay Later Option */}
-                                <div className={`border rounded-lg p-4 cursor-pointer transition-all ${field.value === 'bank_app' ? 'border-secondary bg-secondary/5' : 'border-border'}`}>
+                                <div className={`border rounded-lg p-4 cursor-pointer transition-all ${field.value === 'pay_later' ? 'border-secondary bg-secondary/5' : 'border-border'}`}>
                                   <div className="flex items-start gap-3">
-                                    <RadioGroupItem value="bank_app" id="bank_app" className="mt-1" />
+                                    <RadioGroupItem value="pay_later" id="pay_later" className="mt-1" />
                                     <div className="flex-1">
-                                      <Label htmlFor="bank_app" className="font-medium cursor-pointer">
+                                      <Label htmlFor="pay_later" className="font-medium cursor-pointer">
                                         Thanh toán vào ngày {format(checkIn, 'd MMMM, yyyy', { locale: vi })}
                                       </Label>
                                       <div className="mt-2 space-y-1 text-sm">
@@ -382,8 +440,8 @@ const Booking = () => {
                                         </p>
                                       </div>
                                       <div className="flex items-center gap-2 mt-3">
-                                        <Smartphone className="w-5 h-5 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">App ngân hàng</span>
+                                        <Clock className="w-5 h-5 text-muted-foreground" />
+                                        <span className="text-sm text-muted-foreground">Thanh toán tại khách sạn</span>
                                       </div>
                                     </div>
                                   </div>
@@ -395,11 +453,13 @@ const Booking = () => {
                                     <RadioGroupItem value="debit_card" id="debit_card" className="mt-1" />
                                     <div className="flex-1">
                                       <Label htmlFor="debit_card" className="font-medium cursor-pointer">
-                                        Thanh toán ngay bằng thẻ ghi nợ
+                                        Thanh toán bằng thẻ ghi nợ
                                       </Label>
                                       <div className="flex items-center gap-2 mt-2">
                                         <CreditCard className="w-5 h-5 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">Thẻ ghi nợ (Visa, Mastercard)</span>
+                                        <span className="text-sm text-muted-foreground">Visa, Mastercard</span>
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Visa" className="h-5" />
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5" />
                                       </div>
                                     </div>
                                   </div>
@@ -416,6 +476,22 @@ const Booking = () => {
                                       <div className="flex items-center gap-2 mt-2">
                                         <Wallet className="w-5 h-5 text-pink-500" />
                                         <span className="text-sm text-muted-foreground">Ví điện tử MoMo</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Bank App Option */}
+                                <div className={`border rounded-lg p-4 cursor-pointer transition-all ${field.value === 'bank_app' ? 'border-secondary bg-secondary/5' : 'border-border'}`}>
+                                  <div className="flex items-start gap-3">
+                                    <RadioGroupItem value="bank_app" id="bank_app" className="mt-1" />
+                                    <div className="flex-1">
+                                      <Label htmlFor="bank_app" className="font-medium cursor-pointer">
+                                        Thanh toán qua App ngân hàng
+                                      </Label>
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <Building2 className="w-5 h-5 text-blue-600" />
+                                        <span className="text-sm text-muted-foreground">Chuyển khoản ngân hàng</span>
                                       </div>
                                     </div>
                                   </div>
@@ -742,7 +818,10 @@ const Booking = () => {
                     )}
                   </Button>
                   <p className="text-center text-sm text-muted-foreground">
-                    Quý khách sẽ trả <span className="font-semibold">0 ₫</span> hôm nay
+                    {form.watch('paymentMethod') === 'pay_later' 
+                      ? `Quý khách sẽ trả 0 ₫ hôm nay`
+                      : `Quý khách sẽ thanh toán ${formatPrice(totalPrice)}`
+                    }
                   </p>
                 </form>
               </Form>
