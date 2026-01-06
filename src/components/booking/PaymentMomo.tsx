@@ -16,8 +16,8 @@ const PaymentMomo = ({
   totalPrice, 
   onComplete, 
   onBack,
-  recipientName = 'NGUYEN VAN A',
-  recipientPhone = '0901234567'
+  recipientName = 'NGUYỄN VĂN TRƯỜNG',
+  recipientPhone = '0562070694'
 }: PaymentMomoProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);

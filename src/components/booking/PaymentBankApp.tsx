@@ -18,8 +18,8 @@ const PaymentBankApp = ({
   onComplete, 
   onBack,
   bankName = 'Vietcombank',
-  accountNumber = '1234567890123',
-  accountName = 'NGUYEN VAN A'
+  accountNumber = '1023630921',
+  accountName = 'NGUYỄN VĂN TRƯỜNG'
 }: PaymentBankAppProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
