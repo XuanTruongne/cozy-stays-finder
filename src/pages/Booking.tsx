@@ -293,7 +293,11 @@ const Booking = () => {
       // Pay later goes directly to invoice
       setIsSubmitting(true);
       try {
-        await saveBookingToDatabase(data, 'pending');
+        const bookingCode = await saveBookingToDatabase(data, 'pending');
+        
+        // Send confirmation email
+        await sendConfirmationEmail(bookingCode, data);
+        
         setPaymentStep('invoice');
         toast.success('Đặt phòng thành công!');
       } catch (error: any) {
@@ -310,12 +314,47 @@ const Booking = () => {
     }
   };
 
+  const sendConfirmationEmail = async (bookingCode: string, formData: BookingFormData) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-booking-confirmation', {
+        body: {
+          guestEmail: formData.guestEmail,
+          guestName: formData.guestName,
+          guestPhone: formData.guestPhone,
+          hotelName: hotel!.name,
+          hotelAddress: hotel!.address,
+          roomName: selectedRoom!.name,
+          checkIn: format(checkIn, 'yyyy-MM-dd'),
+          checkOut: format(checkOut, 'yyyy-MM-dd'),
+          guests: parseInt(formData.guests),
+          totalPrice,
+          bookingId: bookingCode,
+          paymentMethod: formData.paymentMethod === 'pay_later' ? 'Thanh toán tại khách sạn' :
+                         formData.paymentMethod === 'debit_card' ? 'Thẻ ghi nợ' :
+                         formData.paymentMethod === 'momo' ? 'MoMo' : 'Chuyển khoản ngân hàng',
+        },
+      });
+
+      if (error) {
+        console.error('Failed to send confirmation email:', error);
+      } else {
+        console.log('Confirmation email sent:', data);
+      }
+    } catch (err) {
+      console.error('Error sending confirmation email:', err);
+    }
+  };
+
   const handlePaymentComplete = async () => {
     if (!pendingFormData) return;
     
     setIsSubmitting(true);
     try {
-      await saveBookingToDatabase(pendingFormData, 'confirmed');
+      const bookingCode = await saveBookingToDatabase(pendingFormData, 'confirmed');
+      
+      // Send confirmation email
+      await sendConfirmationEmail(bookingCode, pendingFormData);
+      
       setPaymentStep('invoice');
       toast.success('Thanh toán thành công!');
     } catch (error: any) {
@@ -359,8 +398,8 @@ const Booking = () => {
               totalPrice={totalPrice}
               onComplete={handlePaymentComplete}
               onBack={handleBackToForm}
-              recipientName="NGUYEN VAN A"
-              recipientPhone="0901234567"
+              recipientName="NGUYỄN VĂN TRƯỜNG"
+              recipientPhone="0562070694"
             />
           )}
           {paymentStep === 'bank_app' && (
@@ -369,8 +408,8 @@ const Booking = () => {
               onComplete={handlePaymentComplete}
               onBack={handleBackToForm}
               bankName="Vietcombank"
-              accountNumber="1234567890123"
-              accountName="NGUYEN VAN A"
+              accountNumber="1023630921"
+              accountName="NGUYỄN VĂN TRƯỜNG"
             />
           )}
         </div>
