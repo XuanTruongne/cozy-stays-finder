@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Smartphone, Loader2, ArrowLeft, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import bankQrCode from '@/assets/bank-qr.png';
 
 interface PaymentBankAppProps {
   totalPrice: number;
@@ -12,6 +11,7 @@ interface PaymentBankAppProps {
   bankName?: string;
   accountNumber?: string;
   accountName?: string;
+  bookingCode?: string;
 }
 
 const PaymentBankApp = ({ 
@@ -20,11 +20,27 @@ const PaymentBankApp = ({
   onBack,
   bankName = 'Vietcombank',
   accountNumber = '1023630921',
-  accountName = 'NGUYỄN VĂN TRƯỜNG'
+  accountName = 'NGUYỄN VĂN TRƯỜNG',
+  bookingCode
 }: PaymentBankAppProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  // Generate stable booking code on mount
+  const stableBookingCode = useMemo(() => {
+    return bookingCode || `BOOKING${Date.now().toString().slice(-8)}`;
+  }, [bookingCode]);
+
+  // VietQR API URL - Bank ID for Vietcombank is 970436
+  const vietQrUrl = useMemo(() => {
+    const bankId = '970436'; // Vietcombank BIN
+    const template = 'compact2';
+    const encodedContent = encodeURIComponent(stableBookingCode);
+    return `https://img.vietqr.io/image/${bankId}-${accountNumber}-${template}.png?amount=${totalPrice}&addInfo=${encodedContent}&accountName=${encodeURIComponent(accountName)}`;
+  }, [accountNumber, totalPrice, stableBookingCode, accountName]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,16 +98,34 @@ const PaymentBankApp = ({
           <p className="text-2xl font-bold text-blue-600">{formatTime(timeLeft)}</p>
         </div>
 
-        {/* Bank QR Code */}
+        {/* VietQR Code */}
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-48 h-48 bg-white rounded-lg flex items-center justify-center border-2 border-blue-300 p-2 shadow-md">
-            <img 
-              src={bankQrCode} 
-              alt="VietQR Code" 
-              className="w-full h-full object-contain"
-            />
+          <div className="bg-white rounded-lg flex items-center justify-center border-2 border-blue-300 p-2 shadow-md overflow-hidden">
+            {!imageLoaded && !imageError && (
+              <div className="w-48 h-48 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            )}
+            {imageError ? (
+              <div className="w-48 h-48 flex items-center justify-center bg-blue-50">
+                <p className="text-sm text-muted-foreground text-center px-4">
+                  Không thể tải mã QR. Vui lòng chuyển khoản thủ công.
+                </p>
+              </div>
+            ) : (
+              <img 
+                src={vietQrUrl} 
+                alt="VietQR Code" 
+                className={`max-w-[200px] object-contain ${imageLoaded ? 'block' : 'hidden'}`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
+              />
+            )}
           </div>
-          <p className="text-sm text-blue-600 font-medium">Quét mã QR bằng app ngân hàng</p>
+          <div className="text-center">
+            <p className="text-sm text-blue-600 font-medium">Quét mã QR bằng app ngân hàng</p>
+            <p className="text-xs text-muted-foreground mt-1">Số tiền và nội dung đã được điền sẵn</p>
+          </div>
         </div>
 
         {/* Payment Details */}
@@ -141,12 +175,12 @@ const PaymentBankApp = ({
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Nội dung CK:</span>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm">BOOKING{Date.now().toString().slice(-6)}</span>
+              <span className="font-mono text-sm">{stableBookingCode}</span>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="h-6 w-6 p-0"
-                onClick={() => copyToClipboard(`BOOKING${Date.now().toString().slice(-6)}`, 'content')}
+                onClick={() => copyToClipboard(stableBookingCode, 'content')}
               >
                 {copied === 'content' ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
               </Button>
@@ -156,7 +190,7 @@ const PaymentBankApp = ({
 
         {/* Supported Banks */}
         <div className="text-center">
-          <p className="text-xs text-muted-foreground mb-2">Hỗ trợ các ngân hàng:</p>
+          <p className="text-xs text-muted-foreground mb-2">Hỗ trợ tất cả ngân hàng Việt Nam qua VietQR</p>
           <div className="flex justify-center gap-2 flex-wrap">
             {['Vietcombank', 'Techcombank', 'BIDV', 'VietinBank', 'MB Bank', 'TPBank'].map(bank => (
               <span key={bank} className="text-xs bg-muted px-2 py-1 rounded">{bank}</span>

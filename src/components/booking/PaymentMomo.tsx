@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet, Loader2, ArrowLeft, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import momoQrCode from '@/assets/momo-qr.png';
 
 interface PaymentMomoProps {
   totalPrice: number;
@@ -11,6 +10,7 @@ interface PaymentMomoProps {
   onBack: () => void;
   recipientName?: string;
   recipientPhone?: string;
+  bookingCode?: string;
 }
 
 const PaymentMomo = ({ 
@@ -18,11 +18,28 @@ const PaymentMomo = ({
   onComplete, 
   onBack,
   recipientName = 'NGUYỄN VĂN TRƯỜNG',
-  recipientPhone = '0562070694'
+  recipientPhone = '0562070694',
+  bookingCode
 }: PaymentMomoProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  // Generate stable booking code on mount
+  const stableBookingCode = useMemo(() => {
+    return bookingCode || `BOOKING${Date.now().toString().slice(-8)}`;
+  }, [bookingCode]);
+
+  // MoMo QR using VietQR format (MoMo bank ID: 965)
+  // Alternative: Using me.momo.vn link
+  const momoQrUrl = useMemo(() => {
+    // MoMo deep link format for QR
+    const momoDeepLink = `2|99|${recipientPhone}|||0|0|${totalPrice}|${stableBookingCode}||transfer_myqr`;
+    // Generate QR using a QR code API
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(momoDeepLink)}`;
+  }, [recipientPhone, totalPrice, stableBookingCode]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,14 +99,32 @@ const PaymentMomo = ({
 
         {/* MoMo QR Code */}
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-48 h-48 bg-white rounded-lg flex items-center justify-center border-2 border-pink-300 p-2 shadow-md">
-            <img 
-              src={momoQrCode} 
-              alt="MoMo QR Code" 
-              className="w-full h-full object-contain"
-            />
+          <div className="bg-white rounded-lg flex items-center justify-center border-2 border-pink-300 p-3 shadow-md">
+            {!imageLoaded && !imageError && (
+              <div className="w-48 h-48 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+              </div>
+            )}
+            {imageError ? (
+              <div className="w-48 h-48 flex items-center justify-center bg-pink-50">
+                <p className="text-sm text-muted-foreground text-center px-4">
+                  Không thể tải mã QR. Vui lòng chuyển khoản thủ công.
+                </p>
+              </div>
+            ) : (
+              <img 
+                src={momoQrUrl} 
+                alt="MoMo QR Code" 
+                className={`w-48 h-48 object-contain ${imageLoaded ? 'block' : 'hidden'}`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
+              />
+            )}
           </div>
-          <p className="text-sm text-pink-600 font-medium">Quét mã QR bằng app MoMo</p>
+          <div className="text-center">
+            <p className="text-sm text-pink-600 font-medium">Quét mã QR bằng app MoMo</p>
+            <p className="text-xs text-muted-foreground mt-1">Số tiền và nội dung đã được điền sẵn</p>
+          </div>
         </div>
 
         {/* Payment Details */}
@@ -134,12 +169,12 @@ const PaymentMomo = ({
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Nội dung:</span>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm">BOOKING{Date.now().toString().slice(-6)}</span>
+              <span className="font-mono text-sm">{stableBookingCode}</span>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="h-6 w-6 p-0"
-                onClick={() => copyToClipboard(`BOOKING${Date.now().toString().slice(-6)}`, 'content')}
+                onClick={() => copyToClipboard(stableBookingCode, 'content')}
               >
                 {copied === 'content' ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
               </Button>
