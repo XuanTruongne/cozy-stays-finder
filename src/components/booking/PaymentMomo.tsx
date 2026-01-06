@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Loader2, ArrowLeft, Copy, Check, Smartphone } from 'lucide-react';
+import { Wallet, Loader2, ArrowLeft, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import momoQrCode from '@/assets/momo-qr.png';
 
 interface PaymentMomoProps {
   totalPrice: number;
@@ -79,15 +80,16 @@ const PaymentMomo = ({
           <p className="text-2xl font-bold text-pink-600">{formatTime(timeLeft)}</p>
         </div>
 
-        {/* MoMo QR Code Placeholder */}
+        {/* MoMo QR Code */}
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-48 h-48 bg-gradient-to-br from-pink-100 to-pink-200 rounded-lg flex items-center justify-center border-2 border-pink-300">
-            <div className="text-center">
-              <Smartphone className="w-16 h-16 text-pink-500 mx-auto mb-2" />
-              <p className="text-sm text-pink-600 font-medium">Quét mã QR</p>
-              <p className="text-xs text-pink-500">bằng app MoMo</p>
-            </div>
+          <div className="w-48 h-48 bg-white rounded-lg flex items-center justify-center border-2 border-pink-300 p-2 shadow-md">
+            <img 
+              src={momoQrCode} 
+              alt="MoMo QR Code" 
+              className="w-full h-full object-contain"
+            />
           </div>
+          <p className="text-sm text-pink-600 font-medium">Quét mã QR bằng app MoMo</p>
         </div>
 
         {/* Payment Details */}

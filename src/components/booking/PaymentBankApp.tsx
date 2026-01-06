@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Smartphone, Loader2, ArrowLeft, Copy, Check, Building2 } from 'lucide-react';
+import { Smartphone, Loader2, ArrowLeft, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import bankQrCode from '@/assets/bank-qr.png';
 
 interface PaymentBankAppProps {
   totalPrice: number;
@@ -81,15 +82,16 @@ const PaymentBankApp = ({
           <p className="text-2xl font-bold text-blue-600">{formatTime(timeLeft)}</p>
         </div>
 
-        {/* Bank QR Code Placeholder */}
+        {/* Bank QR Code */}
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300">
-            <div className="text-center">
-              <Building2 className="w-16 h-16 text-blue-500 mx-auto mb-2" />
-              <p className="text-sm text-blue-600 font-medium">Quét mã QR</p>
-              <p className="text-xs text-blue-500">bằng app ngân hàng</p>
-            </div>
+          <div className="w-48 h-48 bg-white rounded-lg flex items-center justify-center border-2 border-blue-300 p-2 shadow-md">
+            <img 
+              src={bankQrCode} 
+              alt="VietQR Code" 
+              className="w-full h-full object-contain"
+            />
           </div>
+          <p className="text-sm text-blue-600 font-medium">Quét mã QR bằng app ngân hàng</p>
         </div>
 
         {/* Payment Details */}
