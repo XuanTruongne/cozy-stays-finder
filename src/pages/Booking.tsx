@@ -235,7 +235,7 @@ const Booking = () => {
       data.specialRequests || '',
     ].filter(Boolean).join('; ');
 
-    const { error } = await supabase.from('bookings').insert({
+    const { data: insertedBooking, error } = await supabase.from('bookings').insert({
       user_id: user.id,
       hotel_id: hotelId!,
       room_id: selectedRoom!.id,
@@ -248,11 +248,12 @@ const Booking = () => {
       special_requests: allSpecialRequests || null,
       total_price: totalPrice,
       status: status,
-    });
+    }).select('id').single();
 
     if (error) throw error;
 
-    const bookingCode = `BK${Date.now().toString().slice(-8)}`;
+    const bookingId = insertedBooking.id;
+    const bookingCode = bookingId.slice(0, 8).toUpperCase();
     
     setBookingDetails({
       hotelName: hotel.name,
@@ -269,7 +270,7 @@ const Booking = () => {
       bookingCode,
     });
 
-    return bookingCode;
+    return bookingId;
   };
 
   const onSubmit = async (data: BookingFormData) => {
@@ -314,24 +315,16 @@ const Booking = () => {
     }
   };
 
-  const sendConfirmationEmail = async (bookingCode: string, formData: BookingFormData) => {
+  const sendConfirmationEmail = async (bookingId: string, formData: BookingFormData) => {
     try {
+      const paymentMethodLabel = formData.paymentMethod === 'pay_later' ? 'Thanh toán tại khách sạn' :
+                                 formData.paymentMethod === 'debit_card' ? 'Thẻ ghi nợ' :
+                                 formData.paymentMethod === 'momo' ? 'MoMo' : 'Chuyển khoản ngân hàng';
+      
       const { data, error } = await supabase.functions.invoke('send-booking-confirmation', {
         body: {
-          guestEmail: formData.guestEmail,
-          guestName: formData.guestName,
-          guestPhone: formData.guestPhone,
-          hotelName: hotel!.name,
-          hotelAddress: hotel!.address,
-          roomName: selectedRoom!.name,
-          checkIn: format(checkIn, 'yyyy-MM-dd'),
-          checkOut: format(checkOut, 'yyyy-MM-dd'),
-          guests: parseInt(formData.guests),
-          totalPrice,
-          bookingId: bookingCode,
-          paymentMethod: formData.paymentMethod === 'pay_later' ? 'Thanh toán tại khách sạn' :
-                         formData.paymentMethod === 'debit_card' ? 'Thẻ ghi nợ' :
-                         formData.paymentMethod === 'momo' ? 'MoMo' : 'Chuyển khoản ngân hàng',
+          bookingId,
+          paymentMethod: paymentMethodLabel,
         },
       });
 
