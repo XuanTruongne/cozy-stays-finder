@@ -122,6 +122,54 @@ export type Database = {
           },
         ]
       }
+      discounts: {
+        Row: {
+          applicable_to: string[] | null
+          code: string
+          created_at: string | null
+          description: string
+          discount_percent: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_order_amount: number | null
+          updated_at: string | null
+          used_count: number | null
+          valid_from: string | null
+          valid_until: string
+        }
+        Insert: {
+          applicable_to?: string[] | null
+          code: string
+          created_at?: string | null
+          description: string
+          discount_percent: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order_amount?: number | null
+          updated_at?: string | null
+          used_count?: number | null
+          valid_from?: string | null
+          valid_until: string
+        }
+        Update: {
+          applicable_to?: string[] | null
+          code?: string
+          created_at?: string | null
+          description?: string
+          discount_percent?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order_amount?: number | null
+          updated_at?: string | null
+          used_count?: number | null
+          valid_from?: string | null
+          valid_until?: string
+        }
+        Relationships: []
+      }
       hotels: {
         Row: {
           address: string
