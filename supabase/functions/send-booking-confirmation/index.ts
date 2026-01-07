@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,16 +12,6 @@ const corsHeaders = {
 };
 
 interface BookingEmailRequest {
-  guestEmail: string;
-  guestName: string;
-  guestPhone: string;
-  hotelName: string;
-  hotelAddress: string;
-  roomName: string;
-  checkIn: string;
-  checkOut: string;
-  guests: number;
-  totalPrice: number;
   bookingId: string;
   paymentMethod: string;
 }
@@ -58,9 +51,113 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
-    const bookingData: BookingEmailRequest = await req.json();
+    // Get auth token from request
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized - Missing authorization header" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Create Supabase client with service role for database queries
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    console.log("Sending booking confirmation email to:", bookingData.guestEmail);
+    // Create client with user token for auth verification
+    const supabaseAuth = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify user token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized - Invalid token" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const requestData: BookingEmailRequest = await req.json();
+    
+    // Validate required fields
+    if (!requestData.bookingId || typeof requestData.bookingId !== 'string') {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid booking ID" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Verify booking exists and belongs to the authenticated user
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select("id, user_id, guest_email, guest_name, guest_phone, hotel_id, room_id, check_in, check_out, guests, total_price")
+      .eq("id", requestData.bookingId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (bookingError || !booking) {
+      console.error("Booking error:", bookingError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Booking not found or unauthorized" }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Fetch hotel details from database
+    const { data: hotel, error: hotelError } = await supabase
+      .from("hotels")
+      .select("name, address")
+      .eq("id", booking.hotel_id)
+      .single();
+
+    if (hotelError || !hotel) {
+      console.error("Hotel error:", hotelError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Hotel not found" }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Fetch room details from database
+    const { data: room, error: roomError } = await supabase
+      .from("rooms")
+      .select("name")
+      .eq("id", booking.room_id)
+      .single();
+
+    if (roomError || !room) {
+      console.error("Room error:", roomError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Room not found" }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Sanitize payment method from request (the only user-provided data now)
+    const paymentMethod = escapeHtml(requestData.paymentMethod || "Thanh toán online");
+    
+    console.log("Sending booking confirmation email to:", booking.guest_email);
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -77,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <p style="font-size: 16px; margin-bottom: 20px;">
-            Xin chào <strong>${escapeHtml(bookingData.guestName)}</strong>,
+            Xin chào <strong>${escapeHtml(booking.guest_name)}</strong>,
           </p>
           <p style="font-size: 16px; margin-bottom: 25px;">
             Cảm ơn bạn đã đặt phòng. Dưới đây là thông tin chi tiết đặt phòng của bạn:
@@ -85,44 +182,44 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
             <h2 style="color: #667eea; margin-top: 0; font-size: 18px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
-              📋 Mã đặt phòng: <span style="color: #333;">${bookingData.bookingId.slice(0, 8).toUpperCase()}</span>
+              📋 Mã đặt phòng: <span style="color: #333;">${booking.id.slice(0, 8).toUpperCase()}</span>
             </h2>
             
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="padding: 8px 0; color: #666;">🏨 Khách sạn:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${escapeHtml(bookingData.hotelName)}</td>
+                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${escapeHtml(hotel.name)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">📍 Địa chỉ:</td>
-                <td style="padding: 8px 0; text-align: right;">${escapeHtml(bookingData.hotelAddress)}</td>
+                <td style="padding: 8px 0; text-align: right;">${escapeHtml(hotel.address)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">🛏️ Phòng:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${escapeHtml(bookingData.roomName)}</td>
+                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${escapeHtml(room.name)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">📅 Nhận phòng:</td>
-                <td style="padding: 8px 0; text-align: right;">${formatDate(bookingData.checkIn)}</td>
+                <td style="padding: 8px 0; text-align: right;">${formatDate(booking.check_in)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">📅 Trả phòng:</td>
-                <td style="padding: 8px 0; text-align: right;">${formatDate(bookingData.checkOut)}</td>
+                <td style="padding: 8px 0; text-align: right;">${formatDate(booking.check_out)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">👥 Số khách:</td>
-                <td style="padding: 8px 0; text-align: right;">${bookingData.guests} người</td>
+                <td style="padding: 8px 0; text-align: right;">${Number(booking.guests)} người</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">💳 Thanh toán:</td>
-                <td style="padding: 8px 0; text-align: right;">${escapeHtml(bookingData.paymentMethod)}</td>
+                <td style="padding: 8px 0; text-align: right;">${paymentMethod}</td>
               </tr>
             </table>
           </div>
           
           <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 25px;">
             <p style="margin: 0; color: white; font-size: 14px;">Tổng thanh toán</p>
-            <p style="margin: 5px 0 0 0; color: white; font-size: 28px; font-weight: bold;">${formatCurrency(bookingData.totalPrice)}</p>
+            <p style="margin: 5px 0 0 0; color: white; font-size: 28px; font-weight: bold;">${formatCurrency(Number(booking.total_price))}</p>
           </div>
           
           <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #ffc107;">
@@ -156,8 +253,8 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "Hotel Booking <onboarding@resend.dev>",
-        to: [bookingData.guestEmail],
-        subject: `✅ Xác nhận đặt phòng tại ${escapeHtml(bookingData.hotelName)}`,
+        to: [booking.guest_email],
+        subject: `✅ Xác nhận đặt phòng tại ${escapeHtml(hotel.name)}`,
         html: emailHtml,
       }),
     });
@@ -181,7 +278,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error sending booking confirmation:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "An error occurred while sending the confirmation email" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
