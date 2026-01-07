@@ -50,6 +50,13 @@ import PaymentDebitCard from '@/components/booking/PaymentDebitCard';
 import PaymentMomo from '@/components/booking/PaymentMomo';
 import PaymentBankApp from '@/components/booking/PaymentBankApp';
 import BookingInvoice from '@/components/booking/BookingInvoice';
+import PromoCodeInput from '@/components/booking/PromoCodeInput';
+
+interface AppliedDiscount {
+  code: string;
+  discountPercent: number;
+  description: string;
+}
 
 const bookingSchema = z.object({
   guestName: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100),
@@ -120,6 +127,7 @@ const Booking = () => {
   const [showMoreRequests, setShowMoreRequests] = useState(false);
   const [selectedExtraRequests, setSelectedExtraRequests] = useState<string[]>([]);
   const [isEditingGuest, setIsEditingGuest] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
   const [bookingDetails, setBookingDetails] = useState<{
     hotelName: string;
     hotelAddress?: string;
@@ -128,6 +136,9 @@ const Booking = () => {
     checkOut: Date;
     guests: number;
     totalPrice: number;
+    discountAmount?: number;
+    finalPrice?: number;
+    promoCode?: string;
     guestName: string;
     guestEmail: string;
     guestPhone: string;
@@ -211,6 +222,8 @@ const Booking = () => {
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
   const guestsCount = parseInt(form.watch('guests') || '1');
   const totalPrice = selectedRoom ? selectedRoom.price * nights : 0;
+  const discountAmount = appliedDiscount ? Math.round(totalPrice * appliedDiscount.discountPercent / 100) : 0;
+  const finalPrice = totalPrice - discountAmount;
   const freeCancelDate = addDays(checkIn, -1);
 
   const handleExtraRequestToggle = (requestId: string) => {
@@ -246,7 +259,7 @@ const Booking = () => {
       guest_email: data.guestEmail,
       guest_phone: data.guestPhone,
       special_requests: allSpecialRequests || null,
-      total_price: totalPrice,
+      total_price: finalPrice,
       status: status,
     }).select('id').single();
 
@@ -263,6 +276,9 @@ const Booking = () => {
       checkOut,
       guests: guestsCount,
       totalPrice,
+      discountAmount: discountAmount > 0 ? discountAmount : undefined,
+      finalPrice: discountAmount > 0 ? finalPrice : undefined,
+      promoCode: appliedDiscount?.code,
       guestName: data.guestName,
       guestEmail: data.guestEmail,
       guestPhone: data.guestPhone,
@@ -271,6 +287,14 @@ const Booking = () => {
     });
 
     return bookingId;
+  };
+
+  const handleApplyDiscount = (discount: AppliedDiscount) => {
+    setAppliedDiscount(discount);
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
   };
 
   const onSubmit = async (data: BookingFormData) => {
@@ -534,6 +558,17 @@ const Booking = () => {
                           </FormItem>
                         )}
                       />
+
+                      {/* Promo Code Input */}
+                      <div className="mt-6 pt-6 border-t">
+                        <PromoCodeInput
+                          propertyType={hotel.property_type}
+                          minOrderAmount={totalPrice}
+                          appliedDiscount={appliedDiscount}
+                          onApply={handleApplyDiscount}
+                          onRemove={handleRemoveDiscount}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -852,7 +887,7 @@ const Booking = () => {
                   <p className="text-center text-sm text-muted-foreground">
                     {form.watch('paymentMethod') === 'pay_later' 
                       ? `Quý khách sẽ trả 0 ₫ hôm nay`
-                      : `Quý khách sẽ thanh toán ${formatPrice(totalPrice)}`
+                      : `Quý khách sẽ thanh toán ${formatPrice(finalPrice)}`
                     }
                   </p>
                 </form>
@@ -991,6 +1026,16 @@ const Booking = () => {
                       </span>
                       <span>{formatPrice(totalPrice)}</span>
                     </div>
+                    {appliedDiscount && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-600">
+                          Giảm giá ({appliedDiscount.code})
+                        </span>
+                        <span className="text-green-600 font-medium">
+                          -{formatPrice(discountAmount)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Thuế và phí</span>
                       <span className="text-muted-foreground">Đã bao gồm</span>
@@ -1006,9 +1051,16 @@ const Booking = () => {
                   {/* Total Price */}
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-lg">Giá tiền</span>
-                    <span className="text-2xl font-bold text-secondary">
-                      {formatPrice(totalPrice)}
-                    </span>
+                    <div className="text-right">
+                      {appliedDiscount && (
+                        <span className="text-sm text-muted-foreground line-through mr-2">
+                          {formatPrice(totalPrice)}
+                        </span>
+                      )}
+                      <span className="text-2xl font-bold text-secondary">
+                        {formatPrice(finalPrice)}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Giá đã bao gồm: Phí dịch vụ 5%, Thuế 8%
