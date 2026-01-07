@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import SearchForm from '@/components/search/SearchForm';
 import HotelCard from '@/components/hotels/HotelCard';
+import TetPromoBanner from '@/components/home/TetPromoBanner';
+import PromoCodeSection from '@/components/home/PromoCodeSection';
+import BlogSection from '@/components/home/BlogSection';
 import { useFeaturedHotels } from '@/hooks/useHotels';
 import { ROOM_TYPES } from '@/lib/constants';
 
@@ -37,6 +40,9 @@ const Index = () => {
           <SearchForm />
         </div>
       </section>
+
+      {/* Tet Promo Banner */}
+      <TetPromoBanner />
 
       {/* Features */}
       <section className="py-16 bg-muted">
@@ -136,6 +142,12 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Promo Codes */}
+      <PromoCodeSection />
+
+      {/* Blog Section */}
+      <BlogSection />
 
       {/* CTA */}
       <section className="py-20 bg-primary text-primary-foreground">
