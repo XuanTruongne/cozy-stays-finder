@@ -36,6 +36,17 @@ const formatDate = (dateStr: string) => {
   });
 };
 
+// HTML escape function to prevent injection attacks
+const escapeHtml = (unsafe: string): string => {
+  if (typeof unsafe !== 'string') return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -66,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <p style="font-size: 16px; margin-bottom: 20px;">
-            Xin chào <strong>${bookingData.guestName}</strong>,
+            Xin chào <strong>${escapeHtml(bookingData.guestName)}</strong>,
           </p>
           <p style="font-size: 16px; margin-bottom: 25px;">
             Cảm ơn bạn đã đặt phòng. Dưới đây là thông tin chi tiết đặt phòng của bạn:
@@ -80,15 +91,15 @@ const handler = async (req: Request): Promise<Response> => {
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="padding: 8px 0; color: #666;">🏨 Khách sạn:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${bookingData.hotelName}</td>
+                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${escapeHtml(bookingData.hotelName)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">📍 Địa chỉ:</td>
-                <td style="padding: 8px 0; text-align: right;">${bookingData.hotelAddress}</td>
+                <td style="padding: 8px 0; text-align: right;">${escapeHtml(bookingData.hotelAddress)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">🛏️ Phòng:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${bookingData.roomName}</td>
+                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${escapeHtml(bookingData.roomName)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">📅 Nhận phòng:</td>
@@ -104,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">💳 Thanh toán:</td>
-                <td style="padding: 8px 0; text-align: right;">${bookingData.paymentMethod}</td>
+                <td style="padding: 8px 0; text-align: right;">${escapeHtml(bookingData.paymentMethod)}</td>
               </tr>
             </table>
           </div>
@@ -146,7 +157,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Hotel Booking <onboarding@resend.dev>",
         to: [bookingData.guestEmail],
-        subject: `✅ Xác nhận đặt phòng tại ${bookingData.hotelName}`,
+        subject: `✅ Xác nhận đặt phòng tại ${escapeHtml(bookingData.hotelName)}`,
         html: emailHtml,
       }),
     });

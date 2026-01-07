@@ -8,7 +8,10 @@ interface HotelMapProps {
 
 const HotelMap = ({ address, ward }: HotelMapProps) => {
   const fullAddress = `${address}, ${ward}, Vũng Tàu, Việt Nam`;
-  const mapUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(fullAddress)}&zoom=15`;
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const mapUrl = GOOGLE_MAPS_API_KEY 
+    ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(fullAddress)}&zoom=15`
+    : null;
 
   return (
     <Card>
@@ -21,16 +24,22 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4">{fullAddress}</p>
         <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-          <iframe
-            src={mapUrl}
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            title="Bản đồ vị trí"
-          />
+          {mapUrl ? (
+            <iframe
+              src={mapUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Bản đồ vị trí"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              <p className="text-sm">Bản đồ không khả dụng</p>
+            </div>
+          )}
         </div>
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
