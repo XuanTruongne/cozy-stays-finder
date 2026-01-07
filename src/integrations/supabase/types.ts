@@ -130,6 +130,7 @@ export type Database = {
           description: string
           discount_percent: number
           id: string
+          image_url: string | null
           is_active: boolean | null
           max_uses: number | null
           min_order_amount: number | null
@@ -145,6 +146,7 @@ export type Database = {
           description: string
           discount_percent: number
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           max_uses?: number | null
           min_order_amount?: number | null
@@ -160,6 +162,7 @@ export type Database = {
           description?: string
           discount_percent?: number
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           max_uses?: number | null
           min_order_amount?: number | null
