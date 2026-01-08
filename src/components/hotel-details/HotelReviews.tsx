@@ -16,18 +16,32 @@ const HotelReviews = ({ hotelId, rating, reviewCount }: HotelReviewsProps) => {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['reviews', hotelId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First fetch reviews
+      const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
-        .select(`
-          *,
-          profiles:user_id (full_name, avatar_url)
-        `)
+        .select('*')
         .eq('hotel_id', hotelId)
         .order('created_at', { ascending: false })
         .limit(5);
       
-      if (error) throw error;
-      return data;
+      if (reviewsError) throw reviewsError;
+      if (!reviewsData || reviewsData.length === 0) return [];
+
+      // Then fetch profiles for each review
+      const userIds = [...new Set(reviewsData.map(r => r.user_id))];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine reviews with profiles
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      return reviewsData.map(review => ({
+        ...review,
+        profiles: profilesMap.get(review.user_id) || null
+      }));
     },
   });
 
