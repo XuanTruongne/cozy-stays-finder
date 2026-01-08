@@ -5,10 +5,33 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+// Allowed origins for CORS - restrict to your domains
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://lovable.dev',
+];
+
+// Check if origin matches allowed patterns (supports wildcards for lovable.app)
+const isAllowedOrigin = (origin: string | null): boolean => {
+  if (!origin) return false;
+  
+  // Check exact matches
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  
+  // Check lovable.app subdomains pattern
+  if (/^https:\/\/[a-z0-9-]+\.lovable\.app$/.test(origin)) return true;
+  
+  return false;
+};
+
+const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin!,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
 };
 
 interface BookingEmailRequest {
@@ -41,6 +64,9 @@ const escapeHtml = (unsafe: string): string => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -86,6 +112,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Log function invocation for security monitoring
+    console.log(`Email send attempt: user=${user.id}, ip=${req.headers.get('x-forwarded-for') || 'unknown'}`);
+
     const requestData: BookingEmailRequest = await req.json();
     
     // Validate required fields
@@ -102,7 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify booking exists and belongs to the authenticated user
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id, user_id, guest_email, guest_name, guest_phone, hotel_id, room_id, check_in, check_out, guests, total_price")
+      .select("id, user_id, guest_email, guest_name, guest_phone, hotel_id, room_id, check_in, check_out, guests, total_price, status")
       .eq("id", requestData.bookingId)
       .eq("user_id", user.id)
       .single();
@@ -113,6 +142,17 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ success: false, error: "Booking not found or unauthorized" }),
         {
           status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Validate booking status - don't send confirmation for cancelled bookings
+    if (booking.status === 'cancelled') {
+      return new Response(
+        JSON.stringify({ success: false, error: "Cannot send confirmation for cancelled booking" }),
+        {
+          status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
@@ -157,7 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Sanitize payment method from request (the only user-provided data now)
     const paymentMethod = escapeHtml(requestData.paymentMethod || "Thanh toán online");
     
-    console.log("Sending booking confirmation email to:", booking.guest_email);
+    console.log(`Sending booking confirmation email: booking=${booking.id}, to=${booking.guest_email}`);
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -281,7 +321,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ success: false, error: "An error occurred while sending the confirmation email" }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("origin")) },
       }
     );
   }
