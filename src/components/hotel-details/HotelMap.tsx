@@ -13,7 +13,8 @@ interface Coordinates {
 }
 
 const HotelMap = ({ address, ward }: HotelMapProps) => {
-  const fullAddress = `${address}, Phường ${ward}, Vũng Tàu, Việt Nam`;
+  const wardDisplay = ward.toLowerCase().startsWith('phường') ? ward : `Phường ${ward}`;
+  const fullAddress = `${address}, ${wardDisplay}, Vũng Tàu, Việt Nam`;
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -45,7 +46,7 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
         } else {
           // If exact address not found, try searching with just ward and city
           const fallbackResponse = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`Phường ${ward}, Vũng Tàu, Việt Nam`)}&limit=1`,
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${wardDisplay}, Vũng Tàu, Việt Nam`)}&limit=1`,
             {
               headers: {
                 'User-Agent': 'VungTauStay/1.0'
