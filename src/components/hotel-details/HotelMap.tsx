@@ -120,7 +120,7 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
             Xem trên OpenStreetMap
           </a>
           <a
-            href={`https://www.google.com/maps?q=${mapCenter.lat},${mapCenter.lng}`}
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm text-secondary hover:underline"
