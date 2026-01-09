@@ -1,17 +1,6 @@
 import { useEffect, useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix for default marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
 
 interface HotelMapProps {
   address: string;
@@ -27,7 +16,6 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
   const fullAddress = `${address}, Phường ${ward}, Vũng Tàu, Việt Nam`;
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
 
   // Default coordinates for Vung Tau center
   const defaultCoords: Coordinates = { lat: 10.346, lng: 107.084 };
@@ -35,7 +23,6 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
   useEffect(() => {
     const geocodeAddress = async () => {
       setIsLoading(true);
-      setError(false);
       
       try {
         // Use Nominatim (OpenStreetMap's free geocoding service)
@@ -80,7 +67,6 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
       } catch (err) {
         console.error('Geocoding error:', err);
         setCoordinates(defaultCoords);
-        setError(true);
       } finally {
         setIsLoading(false);
       }
@@ -90,6 +76,10 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
   }, [address, ward, fullAddress]);
 
   const mapCenter = coordinates || defaultCoords;
+  
+  // Create OpenStreetMap embed URL with marker
+  const bbox = `${mapCenter.lng - 0.005},${mapCenter.lat - 0.003},${mapCenter.lng + 0.005},${mapCenter.lat + 0.003}`;
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${mapCenter.lat},${mapCenter.lng}`;
 
   return (
     <Card>
@@ -104,27 +94,18 @@ const HotelMap = ({ address, ward }: HotelMapProps) => {
         <div className="aspect-video rounded-lg overflow-hidden bg-muted">
           {isLoading ? (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
               <p className="text-sm">Đang tải bản đồ...</p>
             </div>
           ) : (
-            <MapContainer
-              center={[mapCenter.lat, mapCenter.lng]}
-              zoom={16}
-              style={{ height: '100%', width: '100%' }}
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <Marker position={[mapCenter.lat, mapCenter.lng]}>
-                <Popup>
-                  <strong>{address}</strong>
-                  <br />
-                  Phường {ward}, Vũng Tàu
-                </Popup>
-              </Marker>
-            </MapContainer>
+            <iframe
+              src={mapUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              title="Bản đồ vị trí"
+            />
           )}
         </div>
         <div className="mt-3 flex flex-wrap gap-3">
