@@ -7,6 +7,7 @@ import HotelCard from '@/components/hotels/HotelCard';
 import TetPromoBanner from '@/components/home/TetPromoBanner';
 import PromoCodeSection from '@/components/home/PromoCodeSection';
 import BlogSection from '@/components/home/BlogSection';
+import WhyChooseUs from '@/components/home/WhyChooseUs';
 import { useFeaturedHotels } from '@/hooks/useHotels';
 import { ROOM_TYPES } from '@/lib/constants';
 
@@ -145,6 +146,9 @@ const Index = () => {
 
       {/* Promo Codes */}
       <PromoCodeSection />
+
+      {/* Why Choose Us */}
+      <WhyChooseUs />
 
       {/* Blog Section */}
       <BlogSection />
