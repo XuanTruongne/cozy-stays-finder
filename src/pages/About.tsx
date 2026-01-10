@@ -1,6 +1,7 @@
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, Users, Award, Heart } from 'lucide-react';
+import WhyChooseUs from '@/components/home/WhyChooseUs';
 
 const About = () => {
   const stats = [
@@ -148,6 +149,9 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      {/* Why Choose Us */}
+      <WhyChooseUs />
     </Layout>
   );
 };
