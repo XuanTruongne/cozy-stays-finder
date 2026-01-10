@@ -298,6 +298,7 @@ export type Database = {
       }
       rooms: {
         Row: {
+          address: string | null
           amenities: string[] | null
           available: boolean | null
           capacity: number
@@ -313,6 +314,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
           amenities?: string[] | null
           available?: boolean | null
           capacity?: number
@@ -328,6 +330,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
           amenities?: string[] | null
           available?: boolean | null
           capacity?: number
