@@ -182,6 +182,7 @@ export type Database = {
           featured: boolean | null
           id: string
           images: string[] | null
+          map_embed_url: string | null
           name: string
           property_type: string
           rating: number | null
@@ -197,6 +198,7 @@ export type Database = {
           featured?: boolean | null
           id?: string
           images?: string[] | null
+          map_embed_url?: string | null
           name: string
           property_type?: string
           rating?: number | null
@@ -212,6 +214,7 @@ export type Database = {
           featured?: boolean | null
           id?: string
           images?: string[] | null
+          map_embed_url?: string | null
           name?: string
           property_type?: string
           rating?: number | null
