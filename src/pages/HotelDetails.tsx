@@ -124,7 +124,11 @@ const HotelDetails = () => {
             <HotelRooms rooms={rooms || []} hotelId={hotel.id} />
 
             {/* Map */}
-            <HotelMap address={hotel.address} ward={wardLabel} />
+            <HotelMap 
+              address={hotel.address} 
+              ward={wardLabel} 
+              mapEmbedUrl={hotel.map_embed_url}
+            />
 
             {/* Reviews */}
             <HotelReviews
