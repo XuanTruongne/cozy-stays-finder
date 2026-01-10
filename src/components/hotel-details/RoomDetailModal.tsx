@@ -26,6 +26,8 @@ import {
   BedDouble,
   Shirt,
   Lamp,
+  MapPin,
+  ExternalLink,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/constants';
 import type { Tables } from '@/integrations/supabase/types';
@@ -242,6 +244,36 @@ const RoomDetailModal = ({ room, hotelId, isOpen, onClose }: RoomDetailModalProp
                       </Badge>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Room Location Map */}
+              {room.address && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Vị trí phòng
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">{room.address}</p>
+                  <div className="aspect-video rounded-lg overflow-hidden border">
+                    <iframe
+                      title="Room Location Map"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(room.address)}&output=embed`}
+                    />
+                  </div>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(room.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-secondary hover:underline mt-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Xem trên Google Maps
+                  </a>
                 </div>
               )}
 
