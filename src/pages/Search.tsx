@@ -10,13 +10,11 @@ import { useHotels } from '@/hooks/useHotels';
 import { useRooms } from '@/hooks/useRooms';
 import { ROOM_TYPES, WARDS, formatPrice } from '@/lib/constants';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
-
 interface GuestCount {
   rooms: number;
   adults: number;
   children: number;
 }
-
 const Search = () => {
   const [searchParams] = useSearchParams();
   const initialCheckIn = searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')!) : undefined;
@@ -26,7 +24,11 @@ const Search = () => {
   // Toolbar state
   const [checkIn, setCheckIn] = useState<Date | undefined>(initialCheckIn);
   const [checkOut, setCheckOut] = useState<Date | undefined>(initialCheckOut);
-  const [guests, setGuests] = useState<GuestCount>({ rooms: 1, adults: 2, children: 0 });
+  const [guests, setGuests] = useState<GuestCount>({
+    rooms: 1,
+    adults: 2,
+    children: 0
+  });
 
   // Filter state
   const [selectedTypes, setSelectedTypes] = useState<string[]>(initialType ? [initialType] : []);
@@ -41,10 +43,14 @@ const Search = () => {
       setSelectedTypes([typeFromUrl]);
     }
   }, [searchParams]);
-
-  const { data: hotels, isLoading: hotelsLoading } = useHotels();
-  const { data: rooms, isLoading: roomsLoading } = useRooms();
-
+  const {
+    data: hotels,
+    isLoading: hotelsLoading
+  } = useHotels();
+  const {
+    data: rooms,
+    isLoading: roomsLoading
+  } = useRooms();
   const isLoading = hotelsLoading || roomsLoading;
 
   // Get minimum price for each hotel from rooms
@@ -58,25 +64,22 @@ const Search = () => {
     });
     return prices;
   }, [rooms]);
-
   const filteredHotels = useMemo(() => {
     if (!hotels) return [];
-    
     let results = hotels.filter(hotel => {
       // Filter by ward
       if (ward && ward !== 'all' && hotel.ward !== ward) return false;
-      
+
       // Filter by price range
       const minPrice = hotelMinPrices[hotel.id] || 0;
       if (minPrice < priceRange[0] || minPrice > priceRange[1]) return false;
-      
+
       // Filter by property type (using hotels.property_type column)
       if (selectedTypes.length > 0) {
         if (!selectedTypes.includes(hotel.property_type)) {
           return false;
         }
       }
-      
       return true;
     });
 
@@ -97,34 +100,19 @@ const Search = () => {
       default:
         results.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
-
     return results;
   }, [hotels, ward, priceRange, sortBy, hotelMinPrices, selectedTypes]);
-
   const toggleType = (type: string) => {
-    setSelectedTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
+    setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
   };
-
-  return (
-    <Layout>
+  return <Layout>
       {/* Search Header with Toolbar */}
       <section className="bg-primary py-6">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 my-[50px]">
           <h1 className="text-2xl md:text-3xl font-display font-bold text-primary-foreground mb-4">
             Tìm kiếm chỗ ở
           </h1>
-          <SearchToolbar
-            checkIn={checkIn}
-            checkOut={checkOut}
-            guests={guests}
-            onCheckInChange={setCheckIn}
-            onCheckOutChange={setCheckOut}
-            onGuestsChange={setGuests}
-          />
+          <SearchToolbar checkIn={checkIn} checkOut={checkOut} guests={guests} onCheckInChange={setCheckIn} onCheckOutChange={setCheckOut} onGuestsChange={setGuests} />
         </div>
       </section>
 
@@ -144,21 +132,12 @@ const Search = () => {
                   Loại hình
                 </label>
                 <div className="space-y-2">
-                  {ROOM_TYPES.map((type) => (
-                    <div key={type.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={type.value}
-                        checked={selectedTypes.includes(type.value)}
-                        onCheckedChange={() => toggleType(type.value)}
-                      />
-                      <label
-                        htmlFor={type.value}
-                        className="text-sm font-normal cursor-pointer"
-                      >
+                  {ROOM_TYPES.map(type => <div key={type.value} className="flex items-center space-x-2">
+                      <Checkbox id={type.value} checked={selectedTypes.includes(type.value)} onCheckedChange={() => toggleType(type.value)} />
+                      <label htmlFor={type.value} className="text-sm font-normal cursor-pointer">
                         {type.label}
                       </label>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
 
@@ -167,13 +146,7 @@ const Search = () => {
                 <label className="text-sm font-medium text-foreground mb-4 block">
                   Khoảng giá
                 </label>
-                <Slider
-                  value={priceRange}
-                  onValueChange={setPriceRange}
-                  max={10000000}
-                  step={100000}
-                  className="mb-3"
-                />
+                <Slider value={priceRange} onValueChange={setPriceRange} max={10000000} step={100000} className="mb-3" />
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>{formatPrice(priceRange[0])}</span>
                   <span>{formatPrice(priceRange[1])}</span>
@@ -189,9 +162,7 @@ const Search = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tất cả</SelectItem>
-                    {WARDS.map((w) => (
-                      <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
-                    ))}
+                    {WARDS.map(w => <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -223,31 +194,17 @@ const Search = () => {
               </p>
             </div>
 
-            {isLoading ? (
-              <div className="flex justify-center py-16">
+            {isLoading ? <div className="flex justify-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-secondary" />
-              </div>
-            ) : filteredHotels.length > 0 ? (
-              <div className="space-y-4">
-                {filteredHotels.map((hotel) => (
-                  <HotelListCard 
-                    key={hotel.id} 
-                    hotel={hotel} 
-                    minPrice={hotelMinPrices[hotel.id]}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16 bg-muted/30 rounded-xl border border-border">
+              </div> : filteredHotels.length > 0 ? <div className="space-y-4">
+                {filteredHotels.map(hotel => <HotelListCard key={hotel.id} hotel={hotel} minPrice={hotelMinPrices[hotel.id]} />)}
+              </div> : <div className="text-center py-16 bg-muted/30 rounded-xl border border-border">
                 <p className="text-muted-foreground text-lg">Không tìm thấy kết quả phù hợp</p>
                 <p className="text-sm text-muted-foreground mt-2">Hãy thử thay đổi bộ lọc</p>
-              </div>
-            )}
+              </div>}
           </main>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Search;
