@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Facebook, Instagram, Youtube } from 'lucide-react';
-
 const Footer = () => {
-  return (
-    <footer className="bg-primary text-primary-foreground">
+  return <footer className="bg-primary text-primary-foreground">
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
@@ -30,7 +28,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-lg mb-4">Liên Kết Nhanh</h4>
+            <h4 className="font-semibold text-lg mb-4 text-secondary">Liên Kết Nhanh</h4>
             <ul className="space-y-2">
               <li>
                 <Link to="/" className="text-primary-foreground/80 hover:text-secondary transition-colors">
@@ -62,7 +60,7 @@ const Footer = () => {
 
           {/* Room Types */}
           <div>
-            <h4 className="font-semibold text-lg mb-4">Loại Phòng</h4>
+            <h4 className="font-semibold text-lg mb-4 text-secondary">Loại Phòng</h4>
             <ul className="space-y-2">
               <li>
                 <Link to="/search?type=villa" className="text-primary-foreground/80 hover:text-secondary transition-colors">
@@ -94,7 +92,7 @@ const Footer = () => {
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold text-lg mb-4">Liên Hệ</h4>
+            <h4 className="font-semibold text-lg mb-4 text-secondary">Liên Hệ</h4>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 mt-0.5 text-secondary" />
@@ -121,9 +119,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-primary-foreground/10 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-primary-foreground/60 text-sm">
-              © 2024 VũngTàuStay. Đồ án website booking đặt phòng.
-            </p>
+            <p className="text-primary-foreground/60 text-sm">© 2026 VũngTàuStay.</p>
             <div className="flex gap-6 text-sm">
               <a href="#" className="text-primary-foreground/60 hover:text-secondary transition-colors">
                 Điều khoản sử dụng
@@ -135,8 +131,6 @@ const Footer = () => {
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
