@@ -127,50 +127,54 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Admin email sent successfully:", adminEmailResponse);
 
-    // Send confirmation email to customer
-    const customerEmailResponse = await sendEmail(
-      [email],
-      "Cảm ơn bạn đã liên hệ với VungTauStay!",
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a5f7a; text-align: center;">
-            Cảm ơn bạn đã liên hệ!
-          </h2>
-          
-          <p style="color: #555; line-height: 1.6;">
-            Xin chào <strong>${escapeHtml(name)}</strong>,
-          </p>
-          
-          <p style="color: #555; line-height: 1.6;">
-            Chúng tôi đã nhận được tin nhắn của bạn với tiêu đề "<strong>${escapeHtml(subject)}</strong>".
-          </p>
-          
-          <p style="color: #555; line-height: 1.6;">
-            Đội ngũ VungTauStay sẽ phản hồi bạn trong thời gian sớm nhất (thường trong vòng 24 giờ).
-          </p>
-          
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; color: #666;">
-              <strong>Nội dung bạn đã gửi:</strong><br>
-              <span style="white-space: pre-wrap;">${escapeHtml(message)}</span>
+    // Send confirmation email to customer (non-blocking - don't fail if this fails)
+    try {
+      const customerEmailResponse = await sendEmail(
+        [email],
+        "Cảm ơn bạn đã liên hệ với VungTauStay!",
+        `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #1a5f7a; text-align: center;">
+              Cảm ơn bạn đã liên hệ!
+            </h2>
+            
+            <p style="color: #555; line-height: 1.6;">
+              Xin chào <strong>${escapeHtml(name)}</strong>,
+            </p>
+            
+            <p style="color: #555; line-height: 1.6;">
+              Chúng tôi đã nhận được tin nhắn của bạn với tiêu đề "<strong>${escapeHtml(subject)}</strong>".
+            </p>
+            
+            <p style="color: #555; line-height: 1.6;">
+              Đội ngũ VungTauStay sẽ phản hồi bạn trong thời gian sớm nhất (thường trong vòng 24 giờ).
+            </p>
+            
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #666;">
+                <strong>Nội dung bạn đã gửi:</strong><br>
+                <span style="white-space: pre-wrap;">${escapeHtml(message)}</span>
+              </p>
+            </div>
+            
+            <p style="color: #555; line-height: 1.6;">
+              Trân trọng,<br>
+              <strong>Đội ngũ VungTauStay</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            
+            <p style="color: #888; font-size: 12px; text-align: center;">
+              Nếu bạn cần hỗ trợ gấp, vui lòng gọi: 0254 123 4567
             </p>
           </div>
-          
-          <p style="color: #555; line-height: 1.6;">
-            Trân trọng,<br>
-            <strong>Đội ngũ VungTauStay</strong>
-          </p>
-          
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-          
-          <p style="color: #888; font-size: 12px; text-align: center;">
-            Nếu bạn cần hỗ trợ gấp, vui lòng gọi: 0254 123 4567
-          </p>
-        </div>
-      `
-    );
-
-    console.log("Customer confirmation email sent:", customerEmailResponse);
+        `
+      );
+      console.log("Customer confirmation email sent:", customerEmailResponse);
+    } catch (customerEmailError: any) {
+      // Log warning but don't fail - admin email was already sent successfully
+      console.warn("Failed to send customer confirmation email (domain not verified):", customerEmailError.message);
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: "Emails sent successfully" }),
