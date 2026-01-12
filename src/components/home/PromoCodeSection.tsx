@@ -1,37 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Check, Ticket, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
-const promoCodes = [
-  {
-    code: 'TET2025',
-    discount: '15%',
-    description: 'Giảm 15% cho tất cả đặt phòng',
-    minOrder: '1.000.000đ',
-    expiry: '09/02/2025',
-    image: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=400',
-  },
-  {
-    code: 'XUANMOI30',
-    discount: '30%',
-    description: 'Giảm 30% cho Villa & Resort',
-    minOrder: '3.000.000đ',
-    expiry: '15/02/2025',
-    image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400',
-  },
-  {
-    code: 'VUNGTAU10',
-    discount: '10%',
-    description: 'Giảm 10% - Khách hàng mới',
-    minOrder: '500.000đ',
-    expiry: '28/02/2025',
-    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400',
-  },
-];
+interface Discount {
+  id: string;
+  code: string;
+  discount_percent: number;
+  description: string | null;
+  min_order_amount: number | null;
+  valid_until: string | null;
+  image_url: string | null;
+}
 
 const PromoCodeSection = () => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      const { data, error } = await supabase
+        .from('discounts')
+        .select('id, code, discount_percent, description, min_order_amount, valid_until, image_url')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (!error && data) {
+        setDiscounts(data);
+      }
+      setLoading(false);
+    };
+
+    fetchDiscounts();
+  }, []);
+
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return '0đ';
+    return new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
+  };
+
+  const formatExpiry = (date: string | null) => {
+    if (!date) return 'Không giới hạn';
+    return format(new Date(date), 'dd/MM/yyyy');
+  };
 
   const handleCopy = async (code: string) => {
     try {
@@ -62,58 +77,76 @@ const PromoCodeSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {promoCodes.map((promo) => (
-            <div
-              key={promo.code}
-              className="group bg-white rounded-2xl shadow-lg overflow-hidden border border-border hover:shadow-xl transition-all duration-300"
-            >
-              {/* Image */}
-              <div className="relative h-40 overflow-hidden">
-                <img
-                  src={promo.image}
-                  alt={promo.description}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="flex items-center gap-2">
-                    <Gift className="w-5 h-5 text-secondary" />
-                    <span className="text-2xl font-bold text-white">{promo.discount}</span>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-border animate-pulse">
+                <div className="h-40 bg-muted" />
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                  <div className="h-12 bg-muted rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : discounts.length === 0 ? (
+          <p className="text-center text-muted-foreground">Hiện chưa có mã khuyến mãi nào.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {discounts.map((promo) => (
+              <div
+                key={promo.id}
+                className="group bg-white rounded-2xl shadow-lg overflow-hidden border border-border hover:shadow-xl transition-all duration-300"
+              >
+                {/* Image */}
+                <div className="relative h-40 overflow-hidden">
+                  <img
+                    src={promo.image_url || 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=400'}
+                    alt={promo.description || promo.code}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-5 h-5 text-secondary" />
+                      <span className="text-2xl font-bold text-white">{promo.discount_percent}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-5">
+                  <h3 className="font-semibold text-foreground mb-2">{promo.description || `Giảm ${promo.discount_percent}%`}</h3>
+                  <div className="text-sm text-muted-foreground space-y-1 mb-4">
+                    <p>Đơn tối thiểu: {formatCurrency(promo.min_order_amount)}</p>
+                    <p>Hết hạn: {formatExpiry(promo.valid_until)}</p>
+                  </div>
+
+                  {/* Promo Code with Copy */}
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg border-2 border-dashed border-secondary/30">
+                    <code className="flex-1 text-center font-mono font-bold text-lg text-secondary">
+                      {promo.code}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopy(promo.code)}
+                      className="shrink-0 hover:bg-secondary/10"
+                    >
+                      {copiedCode === promo.code ? (
+                        <Check className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-secondary" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
-
-              {/* Content */}
-              <div className="p-5">
-                <h3 className="font-semibold text-foreground mb-2">{promo.description}</h3>
-                <div className="text-sm text-muted-foreground space-y-1 mb-4">
-                  <p>Đơn tối thiểu: {promo.minOrder}</p>
-                  <p>Hết hạn: {promo.expiry}</p>
-                </div>
-
-                {/* Promo Code with Copy */}
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg border-2 border-dashed border-secondary/30">
-                  <code className="flex-1 text-center font-mono font-bold text-lg text-secondary">
-                    {promo.code}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCopy(promo.code)}
-                    className="shrink-0 hover:bg-secondary/10"
-                  >
-                    {copiedCode === promo.code ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-secondary" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
