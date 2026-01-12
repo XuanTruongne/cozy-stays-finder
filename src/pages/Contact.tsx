@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { MapPin, Phone, Mail, Clock, Send, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { AnimatedSection, StaggerContainer, StaggerItem, FadeInScale } from '@/components/ui/animated-section';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100),
@@ -84,12 +85,14 @@ const Contact = () => {
       {/* Hero */}
       <section className="bg-primary py-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-primary-foreground mb-4">
-            Liên Hệ
-          </h1>
-          <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-            Chúng tôi luôn sẵn sàng hỗ trợ bạn. Hãy liên hệ với chúng tôi bất cứ lúc nào!
-          </p>
+          <AnimatedSection direction="up" delay={0.1}>
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-primary-foreground mb-4">
+              Liên Hệ
+            </h1>
+            <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
+              Chúng tôi luôn sẵn sàng hỗ trợ bạn. Hãy liên hệ với chúng tôi bất cứ lúc nào!
+            </p>
+          </AnimatedSection>
         </div>
       </section>
 
@@ -98,147 +101,155 @@ const Contact = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Contact Info */}
             <div className="lg:col-span-1">
-              <h2 className="text-2xl font-display font-bold mb-6">Thông tin liên hệ</h2>
-              <div className="space-y-4">
+              <AnimatedSection delay={0.1}>
+                <h2 className="text-2xl font-display font-bold mb-6">Thông tin liên hệ</h2>
+              </AnimatedSection>
+              <StaggerContainer className="space-y-4" staggerDelay={0.1}>
                 {contactInfo.map((info, index) => (
-                  <Card key={index}>
-                    <CardContent className="flex items-start gap-4 p-4">
-                      <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center shrink-0">
-                        <info.icon className="w-5 h-5 text-secondary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">{info.title}</h3>
-                        <p className="text-muted-foreground text-sm">{info.content}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <StaggerItem key={index}>
+                    <Card>
+                      <CardContent className="flex items-start gap-4 p-4">
+                        <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center shrink-0">
+                          <info.icon className="w-5 h-5 text-secondary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-1">{info.title}</h3>
+                          <p className="text-muted-foreground text-sm">{info.content}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
 
               {/* Map placeholder */}
-              <div className="mt-6 h-48 bg-muted rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">Bản đồ Google Maps</p>
-              </div>
+              <AnimatedSection delay={0.5}>
+                <div className="mt-6 h-48 bg-muted rounded-lg flex items-center justify-center">
+                  <p className="text-muted-foreground">Bản đồ Google Maps</p>
+                </div>
+              </AnimatedSection>
             </div>
 
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <Card className="p-6 md:p-8">
-                <h2 className="text-2xl font-display font-bold mb-6">Gửi tin nhắn</h2>
-                
-                {isSuccess ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Check className="w-8 h-8 text-green-600" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Cảm ơn bạn đã liên hệ!</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Chúng tôi sẽ phản hồi bạn trong thời gian sớm nhất.
-                    </p>
-                    <Button 
-                      onClick={() => {
-                        setIsSuccess(false);
-                        form.reset();
-                      }}
-                      variant="outline"
-                    >
-                      Gửi tin nhắn khác
-                    </Button>
-                  </div>
-                ) : (
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Họ và tên *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Nguyễn Văn A" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email *</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="email@example.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+              <FadeInScale delay={0.2}>
+                <Card className="p-6 md:p-8">
+                  <h2 className="text-2xl font-display font-bold mb-6">Gửi tin nhắn</h2>
+                  
+                  {isSuccess ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Check className="w-8 h-8 text-green-600" />
                       </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Số điện thoại *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="0901234567" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="subject"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tiêu đề *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Hỗ trợ đặt phòng" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={form.control}
-                        name="message"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nội dung *</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Nhập nội dung tin nhắn của bạn..." 
-                                rows={5}
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <h3 className="text-xl font-semibold mb-2">Cảm ơn bạn đã liên hệ!</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Chúng tôi sẽ phản hồi bạn trong thời gian sớm nhất.
+                      </p>
                       <Button 
-                        type="submit" 
-                        disabled={isSubmitting}
-                        className="w-full md:w-auto bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                        onClick={() => {
+                          setIsSuccess(false);
+                          form.reset();
+                        }}
+                        variant="outline"
                       >
-                        {isSubmitting ? (
-                          'Đang gửi...'
-                        ) : (
-                          <>
-                            <Send className="w-4 h-4 mr-2" />
-                            Gửi tin nhắn
-                          </>
-                        )}
+                        Gửi tin nhắn khác
                       </Button>
-                    </form>
-                  </Form>
-                )}
-              </Card>
+                    </div>
+                  ) : (
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Họ và tên *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Nguyễn Văn A" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email *</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="email@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Số điện thoại *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="0901234567" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="subject"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tiêu đề *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Hỗ trợ đặt phòng" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nội dung *</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Nhập nội dung tin nhắn của bạn..." 
+                                  rows={5}
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button 
+                          type="submit" 
+                          disabled={isSubmitting}
+                          className="w-full md:w-auto bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                        >
+                          {isSubmitting ? (
+                            'Đang gửi...'
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-2" />
+                              Gửi tin nhắn
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  )}
+                </Card>
+              </FadeInScale>
             </div>
           </div>
         </div>
