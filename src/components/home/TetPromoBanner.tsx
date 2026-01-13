@@ -38,7 +38,7 @@ const TetPromoBanner = () => {
                 Đặt Ngay
               </Link>
             </Button>
-            <span className="text-white/80 text-sm">* Áp dụng đến 09/02/2025</span>
+            <span className="text-white/80 text-sm">* Áp dụng đến 25/02/2026</span>
           </div>
         </div>
       </div>
