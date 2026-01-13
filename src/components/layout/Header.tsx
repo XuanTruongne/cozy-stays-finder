@@ -76,7 +76,7 @@ const Header = () => {
                     <DropdownMenuItem onClick={() => navigate('/profile')}>
                       Hồ sơ của tôi
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/bookings')}>
+                    <DropdownMenuItem onClick={() => navigate('/profile?tab=bookings')}>
                       Lịch sử đặt phòng
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
