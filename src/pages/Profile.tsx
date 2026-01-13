@@ -10,13 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Calendar, MapPin, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Calendar, MapPin, Loader2, FileText } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/constants';
 import { AnimatedSection, FadeInScale } from '@/components/ui/animated-section';
+import BookingInvoice from '@/components/booking/BookingInvoice';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100).optional(),
@@ -31,7 +33,8 @@ const Profile = () => {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const defaultTab = searchParams.get('tab') === 'bookings' ? 'bookings' : 'profile';
-
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -287,6 +290,20 @@ const Profile = () => {
                                 <p className="font-semibold text-secondary">{formatPrice(Number(booking.total_price))}</p>
                               </div>
                             </div>
+                            {/* View Invoice Button */}
+                            <div className="mt-3 pt-3 border-t flex justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setIsInvoiceOpen(true);
+                                }}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Xem hóa đơn
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -310,6 +327,33 @@ const Profile = () => {
             </FadeInScale>
           </TabsContent>
         </Tabs>
+
+        {/* Invoice Modal */}
+        <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="sr-only">Hóa đơn đặt phòng</DialogTitle>
+            </DialogHeader>
+            {selectedBooking && (
+              <BookingInvoice
+                bookingDetails={{
+                  hotelName: selectedBooking.hotels?.name || '',
+                  hotelAddress: selectedBooking.hotels?.address,
+                  roomName: selectedBooking.rooms?.name || '',
+                  checkIn: new Date(selectedBooking.check_in),
+                  checkOut: new Date(selectedBooking.check_out),
+                  guests: selectedBooking.guests,
+                  totalPrice: Number(selectedBooking.total_price),
+                  guestName: selectedBooking.guest_name,
+                  guestEmail: selectedBooking.guest_email,
+                  guestPhone: selectedBooking.guest_phone,
+                  paymentMethod: selectedBooking.status === 'confirmed' ? 'paid' : 'pay_later',
+                  bookingCode: selectedBooking.id.slice(0, 8).toUpperCase(),
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
