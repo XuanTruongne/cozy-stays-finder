@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,7 +28,9 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const Profile = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const defaultTab = searchParams.get('tab') === 'bookings' ? 'bookings' : 'profile';
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -142,7 +144,7 @@ const Profile = () => {
           <h1 className="text-3xl font-display font-bold mb-8">Tài khoản của tôi</h1>
         </AnimatedSection>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
           <AnimatedSection delay={0.1}>
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="profile">Thông tin cá nhân</TabsTrigger>
