@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { User, Mail, Phone, Calendar, MapPin, Loader2 } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/constants';
+import { AnimatedSection, FadeInScale } from '@/components/ui/animated-section';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').max(100).optional(),
@@ -137,16 +138,21 @@ const Profile = () => {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-display font-bold mb-8">Tài khoản của tôi</h1>
+        <AnimatedSection>
+          <h1 className="text-3xl font-display font-bold mb-8">Tài khoản của tôi</h1>
+        </AnimatedSection>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="profile">Thông tin cá nhân</TabsTrigger>
-            <TabsTrigger value="bookings">Lịch sử đặt phòng</TabsTrigger>
-          </TabsList>
+          <AnimatedSection delay={0.1}>
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="profile">Thông tin cá nhân</TabsTrigger>
+              <TabsTrigger value="bookings">Lịch sử đặt phòng</TabsTrigger>
+            </TabsList>
+          </AnimatedSection>
 
           <TabsContent value="profile" className="space-y-6">
-            <Card>
+            <FadeInScale delay={0.2}>
+              <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="w-5 h-5" />
@@ -214,11 +220,13 @@ const Profile = () => {
                   </form>
                 </Form>
               </CardContent>
-            </Card>
+              </Card>
+            </FadeInScale>
           </TabsContent>
 
           <TabsContent value="bookings" className="space-y-6">
-            <Card>
+            <FadeInScale delay={0.2}>
+              <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -296,7 +304,8 @@ const Profile = () => {
                   </div>
                 )}
               </CardContent>
-            </Card>
+              </Card>
+            </FadeInScale>
           </TabsContent>
         </Tabs>
       </div>

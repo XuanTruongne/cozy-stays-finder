@@ -51,6 +51,7 @@ import PaymentMomo from '@/components/booking/PaymentMomo';
 import PaymentBankApp from '@/components/booking/PaymentBankApp';
 import BookingInvoice from '@/components/booking/BookingInvoice';
 import PromoCodeInput from '@/components/booking/PromoCodeInput';
+import { AnimatedSection, FadeInScale } from '@/components/ui/animated-section';
 
 interface AppliedDiscount {
   code: string;
@@ -439,19 +440,21 @@ const Booking = () => {
       <BookingSteps currentStep={2} />
       <div className="bg-muted/30 min-h-screen">
         {/* Header with user greeting */}
-        <div className="bg-card border-b">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
+        <AnimatedSection>
+          <div className="bg-card border-b">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Users className="w-5 h-5 text-primary" />
+                </div>
+                <span className="text-sm">
+                  Xin chào <strong>{form.watch('guestName') || user?.email?.split('@')[0]}</strong>! 
+                  <span className="text-muted-foreground ml-1">(không phải là bạn? <button className="text-secondary hover:underline" onClick={() => navigate('/auth')}>Thoát</button>)</span>
+                </span>
               </div>
-              <span className="text-sm">
-                Xin chào <strong>{form.watch('guestName') || user?.email?.split('@')[0]}</strong>! 
-                <span className="text-muted-foreground ml-1">(không phải là bạn? <button className="text-secondary hover:underline" onClick={() => navigate('/auth')}>Thoát</button>)</span>
-              </span>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -461,7 +464,8 @@ const Booking = () => {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   
                   {/* Payment Method Selection */}
-                  <Card>
+                  <FadeInScale delay={0.1}>
+                    <Card>
                     <CardHeader>
                       <CardTitle className="text-xl text-secondary">Chọn cách thanh toán</CardTitle>
                     </CardHeader>
@@ -571,8 +575,10 @@ const Booking = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  </FadeInScale>
 
                   {/* Guest Information */}
+                  <FadeInScale delay={0.2}>
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-xl text-secondary">Ai là khách chính?</CardTitle>
@@ -683,8 +689,10 @@ const Booking = () => {
                       )}
                     </CardContent>
                   </Card>
+                  </FadeInScale>
 
                   {/* Special Requests */}
+                  <FadeInScale delay={0.3}>
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-xl text-secondary">Yêu cầu đặc biệt</CardTitle>
@@ -847,8 +855,10 @@ const Booking = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  </FadeInScale>
 
                   {/* Free Cancellation Policy */}
+                  <FadeInScale delay={0.4}>
                   <Card className="bg-blue-50/80 border-blue-200">
                     <CardContent className="pt-6">
                       <h3 className="text-lg font-semibold text-secondary mb-4">Quyền lợi phòng miễn phí</h3>
@@ -868,9 +878,11 @@ const Booking = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  </FadeInScale>
 
                   {/* Submit Button */}
-                  <Button 
+                  <AnimatedSection delay={0.5}>
+                  <Button
                     type="submit" 
                     disabled={isSubmitting || !selectedRoom}
                     className="w-full h-14 bg-secondary text-secondary-foreground hover:bg-secondary/90 text-lg font-semibold"
@@ -890,6 +902,7 @@ const Booking = () => {
                       : `Quý khách sẽ thanh toán ${formatPrice(finalPrice)}`
                     }
                   </p>
+                  </AnimatedSection>
                 </form>
               </Form>
             </main>
@@ -897,6 +910,7 @@ const Booking = () => {
             {/* Right Sidebar - Booking Summary */}
             <aside className="w-full lg:w-96 shrink-0 space-y-6">
               {/* Date Summary Header */}
+              <AnimatedSection delay={0.2} direction="left">
               <div className="bg-card rounded-lg p-4 border flex items-center justify-between">
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">Nhận phòng</p>
@@ -917,8 +931,10 @@ const Booking = () => {
                 </div>
                 <span className="text-sm text-muted-foreground">{nights} đêm</span>
               </div>
+              </AnimatedSection>
 
               {/* Hotel Info Card */}
+              <FadeInScale delay={0.3}>
               <Card className="sticky top-24">
                 <CardContent className="pt-6 space-y-4">
                   {/* Hotel Header */}
@@ -1067,6 +1083,7 @@ const Booking = () => {
                   </p>
                 </CardContent>
               </Card>
+              </FadeInScale>
             </aside>
           </div>
         </div>
