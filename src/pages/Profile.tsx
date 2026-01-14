@@ -291,10 +291,11 @@ const Profile = () => {
                               </div>
                             </div>
                             {/* View Invoice Button */}
-                            <div className="mt-3 pt-3 border-t flex justify-end">
+                            <div className="mt-3 pt-3 border-t flex justify-center md:justify-end">
                               <Button
                                 variant="outline"
-                                size="sm"
+                                size="default"
+                                className="w-full md:w-auto"
                                 onClick={() => {
                                   setSelectedBooking(booking);
                                   setIsInvoiceOpen(true);
