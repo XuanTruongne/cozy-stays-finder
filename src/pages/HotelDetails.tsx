@@ -124,7 +124,7 @@ const HotelDetails = () => {
               <AnimatedSection delay={0.4}>
                 <Card className="p-6">
                   <h3 className="text-lg font-semibold mb-3">Mô tả</h3>
-                  <p className="text-foreground text-lg font-semibold leading-relaxed whitespace-pre-line">
+                  <p className="text-foreground text-lg font-bold leading-relaxed whitespace-pre-line">
                     {hotel.description}
                   </p>
                 </Card>
